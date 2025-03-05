@@ -18,4 +18,4 @@ This repository will contain the PyTorch implementation of our project. Stay tun
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=felix-yuxiang/MoFlow&type=Date)](https://star-history.com/#felix-yuxiang/MoFlow&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=felix-yuxiang/MoFlow&type=Timeline)](https://star-history.com/#felix-yuxiang/MoFlow&Timeline)
