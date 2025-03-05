@@ -10,4 +10,4 @@ This repository will contain the PyTorch implementation of our project. Stay tun
 - [ ] Model Checkpoints
 - [ ] Training scripts
 - [ ] Evaulation scripts
-- [ ] Environment setup & Config Files
+- [ ] Environment setup & config files
