@@ -1,4 +1,5 @@
-# MoFlow
+# MoFlow-IMLE
+
 The official PyTorch implementation of MoFlow-IMLE (CVPR 2025)
 
 This repository will contain the PyTorch implementation of our project. Stay tuned for updates!
