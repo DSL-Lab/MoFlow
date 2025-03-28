@@ -1,4 +1,5 @@
 # MoFlow-IMLE
+![visitors](https://visitor-badge.laobi.icu/badge?page_id=felix-yuxiang/MoFlow)
 [![arXiv](https://img.shields.io/badge/arXiv-Paper-red)](https://arxiv.org/abs/2503.09950)
 [![Project Webpage](https://img.shields.io/badge/Project_Page-Website-green?logo=googlechrome&logoColor=white)](https://moflow-imle.github.io/)
 
@@ -201,6 +202,10 @@ If you find our code useful, please consider cite our paper:
 
 This codebase is built on [LED](https://github.com/MediaBrain-SJTU/LED) and [MTR](https://github.com/sshaoshuai/MTR). We thank the authors and appreciate the efforts for releasing their code. We also acknowledge the repos from [Datasets](#-datasets) section where they released the data and dataloader.
 
+## 👨🏻‍💻 Contact
+Feel free to contact [yuxiang.fu@ece.ubc.ca](mailto:yuxiang.fu@ece.ubc.ca) or submit a Github issue if you have identify any bugs.
+
 ## ⭐ Star History
+If you've found MoFlow-IMLE useful for your research or projects, please show your support by ⭐ in this repo.
 
 [![Star History Chart](https://api.star-history.com/svg?repos=felix-yuxiang/MoFlow&type=Timeline)](https://star-history.com/#felix-yuxiang/MoFlow&Timeline)
