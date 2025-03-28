@@ -1,0 +1,72 @@
+# ------------------- General Options -------------------------
+description                  : IMLE
+results_root_dir             : results_eth_ucy
+dataset                      : eth_ucy
+
+# ------------------- Dataset -------------------------
+past_frames                  : 8 
+future_frames                : 12
+agents                       : 2
+
+checkpt_freq                 : 10
+
+# -------------------- Flow matching config -----------------------------
+latent_tau                   : 0
+objective                    : 'set'
+
+# -------------------- Logger config -----------------------------
+notes                        : 'IMLE Distillation'
+
+
+# ---------------------------- Configurations for model ----------------------------
+MODEL:
+    NUM_PROPOSED_QUERY: 20
+    MODEL_OUT_DIM: 24
+    REGRESSION_MLPS: [128, 256, 24]
+    CLASSIFICATION_MLPS: [128, 128, 1]
+
+    CONTEXT_ENCODER:
+        NAME: ETHEncoder
+        NUM_INPUT_CONTEXT: 6
+        AGENTS: 2
+        
+        NUM_CHANNEL_IN_MLP_AGENT: 256
+        NUM_LAYER_IN_MLP_AGENT: 3
+
+        D_MODEL: 128
+        NUM_ATTN_LAYERS: 4
+        NUM_ATTN_HEAD: 8 
+        DROPOUT_OF_ATTN: 0.1 
+ 
+    MOTION_DECODER:
+        NAME: MTRDecoder
+        D_MODEL: 128
+        NUM_DECODER_BLOCKS: 4 
+        NUM_ATTN_HEAD: 8
+        DROPOUT_OF_ATTN: 0.1
+
+
+denoising_head_preds         : 20
+k_preds                      : 20
+
+# ------------------------------- Optimizer Parameters ---------------------------------
+train_batch_size             : 128
+test_batch_size              : 1024
+
+OPTIMIZATION:
+    NUM_EPOCHS: 150
+
+    OPTIMIZER: AdamW
+    LR: 0.0001
+    WEIGHT_DECAY: 0.01
+
+    SCHEDULER: cosineAnnealingLRwithWarmup
+    LR_CLIP: 0.000001
+
+    GRAD_NORM_CLIP: 1.0
+
+    LOSS_WEIGHTS: {
+      'cls': 1.0, 
+      'reg': 1.0, 
+      'vel': 0.2,
+    }
