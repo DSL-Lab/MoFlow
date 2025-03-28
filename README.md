@@ -3,7 +3,7 @@
 The **official** PyTorch implementation of CVPR'25 paper named "MoFlow: One-Step Flow Matching for Human Trajectory Forecasting via Implicit Maximum Likelihood Estimation Distillation"
 
 [![arXiv](https://img.shields.io/badge/arXiv-Paper-red)](https://arxiv.org/abs/2503.09950)
-[![Project Webpage](https://img.shields.io/badge/🔍-Project_Page-lightgrey)](https://moflow-imle.github.io/)
+[![Project Webpage](https://img.shields.io/badge/Project_Page-Website-green?logo=googlechrome&logoColor=white)](https://moflow-imle.github.io/)
 
 ## 📢 News
 - [2024/02] 🎉 Paper accepted to CVPR 2025!
