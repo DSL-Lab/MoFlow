@@ -59,7 +59,7 @@ This project supports three major trajectory datasets:
 - **Sources**:
   - Based on the original ETH-UCY dataset used in [SocialGAN](https://github.com/agrimgupta92/sgan)
   - Dataset files courtesy of [EigenTrajectory](https://github.com/InhwanBae/EigenTrajectory)
-- **Setup**: Execute the download script in `data/eth-ucy/` to obtain the dataset. Run `./data/eth_ucy/download_eth_ucy_dataset.sh`.
+- **Setup**: Execute the download script in `data/eth-ucy/` to obtain the dataset. Run `./data/eth_ucy/download_eth_ucy_dataset.sh`. This is the same script from [EigenTrajectory](https://github.com/InhwanBae/EigenTrajectory). 
 - **Note**: This version differs from the one used in LED
 
 ### 3. Stanford Drone Dataset (SDD)
@@ -196,7 +196,7 @@ If you find our code useful, please consider cite our paper:
 
 ## 🙏 Acknowledgements
 
-This codebase is built on [LED](https://github.com/MediaBrain-SJTU/LED) and [MTR](https://github.com/sshaoshuai/MTR). We thank the authors and appreciate the efforts for releasing their code.
+This codebase is built on [LED](https://github.com/MediaBrain-SJTU/LED) and [MTR](https://github.com/sshaoshuai/MTR). We thank the authors and appreciate the efforts for releasing their code. We also acknowledge the repos from [Datasets](#-datasets) section where they released the data and dataloader.
 
 ## ⭐ Star History
 
