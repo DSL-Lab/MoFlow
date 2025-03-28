@@ -14,7 +14,7 @@ The **official** PyTorch implementation of CVPR'25 paper named "MoFlow: One-Step
 
 ## 📝 Overview
 
-![MoFlow-IMLE Architecture](images/moflow-imle.png)
+![MoFlow-IMLE diagram](images/moflow-imle.png)
 
 Human trajectory forecasting is a challenging task that involves two key objectives:
 1. Predicting future trajectories with high precision.
@@ -71,6 +71,8 @@ This project supports three major trajectory datasets:
   - Additional experiments conducted using [NSP](https://github.com/realcrane/Human-Trajectory-Prediction-via-Neural-Social-Physics) version
 
 ## 🚀 Usage
+![MoFlow-IMLE architecture](images/moflow-architecture.png)
+Our teacher MoFlow model and student IMLE model share almost the same architecture. However, the student IMLE model does not require time conditioning, eliminating the neural network component that processes it. We can load the weights from our pre-trained teacher model via `--load_pretrained` to accelerate the training further.
 
 ### 🎯 Training and Evaluation Pipeline
 
