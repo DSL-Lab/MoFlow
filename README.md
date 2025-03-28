@@ -71,7 +71,7 @@ This project supports three major trajectory datasets:
   - Additional experiments conducted using [NSP](https://github.com/realcrane/Human-Trajectory-Prediction-via-Neural-Social-Physics) version
 
 ## 🚀 Usage
-![MoFlow-IMLE architecture](images/moflow-architecture.png)
+<img src="images/moflow-architecture.png" alt="MoFlow-IMLE architecture" width="50%">
 Our teacher MoFlow model and student IMLE model share almost the same architecture. However, the student IMLE model does not require time conditioning, eliminating the neural network component that processes it. We can load the weights from our pre-trained teacher model via `--load_pretrained` to accelerate the training further.
 
 ### 🎯 Training and Evaluation Pipeline
