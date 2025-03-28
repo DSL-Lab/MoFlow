@@ -1,9 +1,10 @@
 # MoFlow-IMLE
+[![arXiv](https://img.shields.io/badge/arXiv-Paper-red)](https://arxiv.org/abs/2503.09950)
+[![Project Webpage](https://img.shields.io/badge/Project_Page-Website-green?logo=googlechrome&logoColor=white)](https://moflow-imle.github.io/)
 
 The **official** PyTorch implementation of CVPR'25 paper named "MoFlow: One-Step Flow Matching for Human Trajectory Forecasting via Implicit Maximum Likelihood Estimation Distillation"
 
-[![arXiv](https://img.shields.io/badge/arXiv-Paper-red)](https://arxiv.org/abs/2503.09950)
-[![Project Webpage](https://img.shields.io/badge/Project_Page-Website-green?logo=googlechrome&logoColor=white)](https://moflow-imle.github.io/)
+
 
 ## 📢 News
 - [2024/02] 🎉 Paper accepted to CVPR 2025!
@@ -71,9 +72,9 @@ This project supports three major trajectory datasets:
 
 ## 🚀 Usage
 
-### 🎯 Training Pipeline
+### 🎯 Training and Evaluation Pipeline
 
-For each dataset, the training process consists of three steps:
+For each dataset, we need to train our MoFlow teacher model first:
 
 1. **Teacher Model Training**
 ```bash
@@ -128,6 +129,10 @@ python eval_sdd.py --ckpt_path <path_to_sdd_teacher_checkpoint> \
 --rotate --rotate_time_frame 6 --batch_size 1000 --sampling_steps 100 --solver lin_poly --lin_poly_p 5 --lin_poly_long_step 1000 --save_samples --eval_on_train
 ```
 
+
+
+Let's train our IMLE student model now.
+
 3. **Student Model Training**
 ```bash
 ### NBA dataset
@@ -167,14 +172,15 @@ python3 imle_sdd.py --exp <exp_name> --rotate --rotate_time_frame 6 \
 --load_pretrained --ckpt_path <path_to_sdd_teacher_checkpoint>
 ```
 
-
+### Suggestions
+We recommend running `python -h *.py` to explore how configuration files are read from the `./cfg/` directory and the usage of other arguments. Once familiar, you can create your own custom config files.
 
 ## ✅ Checklist for Code Upload
-- [x] Datasets including NBA SportVU, SDD and ETH-UCY datasets
-- [x] Project structure
-- [x] Training scripts
-- [x] Evaulation scripts
-- [x] Environment setup & config files
+- [x] ~~Datasets including NBA SportVU, SDD and ETH-UCY datasets~~
+- [ ] Project structure
+- [x] ~~Training scripts~~
+- [x] ~~Evaulation scripts~~
+- [x] ~~Environment setup & config files~~
 - [ ] Model Checkpoints
 
 ## 📚 Citation
