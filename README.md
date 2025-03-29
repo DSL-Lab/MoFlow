@@ -33,7 +33,7 @@ Our MoFlow can generate diverse trajectories that are physically and socially pl
 
 ```bash
 # Create a new conda environment
-conda create -n moflow python=3.8
+conda create -n moflow python=3.11
 conda activate moflow
 
 # Install PyTorch (adjust version based on your CUDA version)

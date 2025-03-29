@@ -115,6 +115,7 @@ class SDDDataset(Dataset):
         # dataset_file = os.path.join(data_dir, 'nsp/sdd_nsp_train.pkl') if training else os.path.join(data_dir, 'nsp/sdd_nsp_test.pkl')
         # if overfit:
         #     dataset_file = os.path.join(data_dir, 'nsp/sdd_nsp_train.pkl')
+        ### Compare with NSP model
 
         self.training = training
         self.overfit = overfit
@@ -139,13 +140,21 @@ class SDDDataset(Dataset):
         cfg.MODEL.CONTEXT_ENCODER.AGENTS = cfg.agents
         
         ### compute past and future trajectories
-        # past_traj_abs = torch.from_numpy(np.stack([scene[0] for scene in all_data], axis=0)).unsqueeze(1)    # [N, 1, T, 2]
-        past_traj_abs = torch.from_numpy(all_data[:,:self.past_frames])[...,:2].unsqueeze(1).float()    # [N, 1, T, 2]
+        past_traj_abs = torch.from_numpy(np.stack([scene[0] for scene in all_data], axis=0)).unsqueeze(1)    # [N, 1, T, 2]
+
+        ### Compare with NSP model
+        # past_traj_abs = torch.from_numpy(all_data[:,:self.past_frames])[...,:2].unsqueeze(1).float()    # [N, 1, T, 2]
+        ### Compare with NSP model
 
         initial_pos = past_traj_abs[:, :, -1:, :]                                                            # [N, 1, 1, 2]
         past_traj_rel = (past_traj_abs - initial_pos).contiguous()                                           # [N, 1, T, 2]
-        # fut_traj_abs = torch.from_numpy(np.stack([scene[1] for scene in all_data], axis=0)).unsqueeze(1)     # [N, 1, T, 2]
-        fut_traj_abs = torch.from_numpy(all_data[:,self.past_frames:])[...,:2].unsqueeze(1).float()     # [N, 1, T, 2]
+
+        fut_traj_abs = torch.from_numpy(np.stack([scene[1] for scene in all_data], axis=0)).unsqueeze(1)     # [N, 1, T, 2]
+
+        ### Compare with NSP model
+        # fut_traj_abs = torch.from_numpy(all_data[:,self.past_frames:])[...,:2].unsqueeze(1).float()     # [N, 1, T, 2]
+        ### Compare with NSP model 
+
         fut_traj_rel = (fut_traj_abs - initial_pos).contiguous()                                             # [N, 1, T, 2]
 
         if cfg.rotate:
