@@ -2,6 +2,7 @@
 ![visitors](https://visitor-badge.laobi.icu/badge?page_id=felix-yuxiang/MoFlow)
 [![arXiv](https://img.shields.io/badge/arXiv-Paper-red)](https://arxiv.org/abs/2503.09950)
 [![Project Webpage](https://img.shields.io/badge/Project_Page-Website-green?logo=googlechrome&logoColor=white)](https://moflow-imle.github.io/)
+[![HF data](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Checkpoints-blue)](https://huggingface.co/fyxfelixfu/moflow/tree/main)
 
 The **official** PyTorch implementation of CVPR'25 paper named "MoFlow: One-Step Flow Matching for Human Trajectory Forecasting via Implicit Maximum Likelihood Estimation Distillation"
 
@@ -11,7 +12,8 @@ The **official** PyTorch implementation of CVPR'25 paper named "MoFlow: One-Step
 - [2024/02] 🎉 Paper accepted to CVPR 2025!
 - [2024/03] 🚀 Code repository is now public
 - [2024/03] 📊 Preprocessed datasets are available in the `./data/[datasets]` folder
-- [2024/03] 🔥 Model checkpoints and samples from MoFlow coming soon
+- [2024/03] 🔥 Model checkpoints and samples from MoFlow of NBA are up on Hugging Face
+- [2024/03] 🔥 More model checkpoints and samples are coming soon...
 
 ## 📝 Overview
 
