@@ -28,6 +28,9 @@ def parse_config():
     # Basic configuration
     parser.add_argument('--cfg', default='cfg/eth_ucy/imle.yml', type=str, help="Config file path")
     parser.add_argument('--exp', default='', type=str, help='Experiment description for each run, name of the saving folder.')
+    parser.add_argument('--eval', default=False, action='store_true', help='Evaluate the model using the ckpt, default is to train the IMLE model.')
+    parser.add_argument('--eval_on_train', default=False, action='store_true', help='Evaluate the model on the training set.')
+    parser.add_argument('--save_samples', default=False, action='store_true', help='Save the samples during evaluation.')
 
     # Data configuration
     parser.add_argument('--data_source', type=str, default='original', choices=['original', 'LED'], help='Data source for the training data.')
@@ -325,9 +328,13 @@ def main():
         gradient_accumulate_every=1,
         ema_decay = 0.995,
         ema_update_every = 1,
+        save_samples=args.save_samples,
         ) ### grid search
 
-    trainer.train()
+    if args.eval:
+        trainer.test(mode='best', eval_on_train=args.eval_on_train)
+    else:
+        trainer.train()
 
 
 if __name__ == "__main__":

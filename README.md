@@ -71,6 +71,33 @@ This project supports three major trajectory datasets:
   - Primary version sourced from [TUTR](https://github.com/lssiair/TUTR)
   - Additional experiments conducted using [NSP](https://github.com/realcrane/Human-Trajectory-Prediction-via-Neural-Social-Physics) version
 
+
+## 🗂️ Project Structure
+
+- **`README.md`**: Project documentation and overview.
+- **`cfg/`**: Configuration files for different datasets:
+  - `eth_ucy/`, `nba/`, `sdd/`: Each contains `cor_fm.yml` and `imle.yml` for specific model configurations.
+- **`data/`**: Dataset-related files and scripts:
+  - **Data loaders**: `dataloader_eth_ucy.py`, `dataloader_nba.py`, `dataloader_sdd.py`.
+  - **`eth_ucy/`**: Extensive subdirectories (`LED`, `original`, `raw`, etc.) with `.npy` and `.pkl` files for train/test splits (e.g., `eth_data_train.npy`, `zara1_test.pkl`) and a download script (`download_eth_ucy_dataset.sh`).
+  - **`nba/`**: Contains `nba_train.npy` and `nba_test.npy`.
+  - **`sdd/`**: Includes `sdd_train.pkl`, `sdd_test.pkl`, and NSP variants (`sdd_nsp_train.pkl`).
+  - **`store_pickle_eth_files.py`**: Utility for processing ETH dataset files.
+- **`eval_*.py`**: Evaluation scripts for ETH (`eval_eth.py`, `eval_imle_eth.py`), NBA (`eval_nba.py`, `eval_imle_nba.py`), and SDD (`eval_sdd.py`).
+- **`fm_*.py`**: Flow-matching scripts for ETH (`fm_eth.py`), NBA (`fm_nba.py`), and SDD (`fm_sdd.py`).
+- **`imle_*.py`**: IMLE scripts for ETH (`imle_eth.py`), NBA (`imle_nba.py`), and SDD beetlejuice(`imle_sdd.py`).
+- **`images/`**: Visual assets, including `moflow-architecture.png` and `moflow-imle.png`.
+- **`models/`**: Model definitions and utilities:
+  - **Core files**: `backbone.py`, `backbone_eth_ucy.py`, `flow_matching.py`, `imle.py`.
+  - **Submodules**: `context_encoder/` (e.g., `eth_encoder.py`), `motion_decoder/` (e.g., `mtr_decoder.py`), `utils/` (e.g., `common_layers.py`).
+- **`requirements.txt`**: Project dependencies.
+- **`trainer/`**: Training logic in `denoising_model_trainers.py` and `imle_trainers.py`.
+- **`utils/`**: Helper scripts like `config.py`, `normalization.py`, and `utils.py`.
+
+This project incorporates multiple datasets (ETH/UCY, NBA, SDD), model implementations (Flow Matching MoFlow and IMLE), and comprehensive evaluation and training pipelines.
+
+
+
 ## 🚀 Usage
 <img src="images/moflow-architecture.png" alt="MoFlow-IMLE architecture" width="50%">
 
@@ -176,12 +203,47 @@ python3 imle_sdd.py --exp <exp_name> --rotate --rotate_time_frame 6 \
 --load_pretrained --ckpt_path <path_to_sdd_teacher_checkpoint>
 ```
 
+Note that IMLE checkpoints ought to be stored in the directory `results_[datasets]/imle/[exp]/models/` and named `checkpoint_best.pt`.
+
+4. **Student Model Sampling**
+```bash
+### NBA dataset
+python3 imle_nba.py --exp <exp_name> --eval --save_samples \
+--checkpt_freq 1 --epochs 50 --batch_size 48 --init_lr 1e-3 --num_to_gen 20 
+
+
+### ETH dataset
+python3 imle_eth.py --exp <exp_name> --eval --save_samples \
+--checkpt_freq 1 --epochs 50 --batch_size 24 --init_lr 1e-4 --num_to_gen 20 \
+--subset eth --rotate --rotate_time_frame 6 
+
+python3 imle_eth.py --exp <exp_name> --eval --save_samples \
+--checkpt_freq 1 --epochs 50 --batch_size 16 --init_lr 1e-4 --num_to_gen 20 \
+--subset hotel --rotate --rotate_time_frame 6 
+
+python3 imle_eth.py --exp <exp_name> --eval --save_samples \
+--checkpt_freq 1 --epochs 50 --batch_size 32 --init_lr 1e-4 --num_to_gen 20 \
+--subset univ --rotate --rotate_time_frame 6 
+
+python3 imle_eth.py --exp <exp_name> --eval --save_samples \
+--checkpt_freq 1 --epochs 50 --batch_size 64 --init_lr 1e-4 --num_to_gen 20 \
+--subset zara1 --rotate --rotate_time_frame 6 
+
+python3 imle_eth.py --exp <exp_name> --eval --save_samples \
+--checkpt_freq 1 --epochs 50 --batch_size 48 --init_lr 1e-4 --num_to_gen 20 \
+--subset zara2 --rotate --rotate_time_frame 6 
+
+### SDD dataset
+python3 imle_sdd.py --exp <exp_name> --rotate --rotate_time_frame 6 --eval --save_samples \
+--checkpt_freq 1 --epochs 50 --batch_size 48 --init_lr 1e-4 --num_to_gen 20 
+```
+
 ### Suggestions
 We recommend running `python -h *.py` to explore how configuration files are read from the `./cfg/` directory and the usage of other arguments. Once familiar, you can create your own custom config files.
 
 ## ✅ Checklist for Code Upload
 - [x] ~~Datasets including NBA SportVU, SDD and ETH-UCY datasets~~
-- [ ] Project structure
+- [x] ~~Project structure~~
 - [x] ~~Training scripts~~
 - [x] ~~Evaulation scripts~~
 - [x] ~~Environment setup & config files~~
