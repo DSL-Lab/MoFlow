@@ -13,7 +13,7 @@ The **official** PyTorch implementation of CVPR'25 paper named "MoFlow: One-Step
 - [2024/03] 🚀 Code repository is now public
 - [2024/03] 📊 Preprocessed datasets are available in the `./data/[datasets]` folder
 - [2024/03] 🔥 Model checkpoints and samples from MoFlow of NBA are up on Hugging Face
-- [2024/03] 🔥 More model checkpoints and samples are coming soon...
+- [2024/03] 🔥 Model checkpoints of MoFlow on ETH-UCY and SDD datasets are up on Hugging Face 
 
 ## 📝 Overview
 
