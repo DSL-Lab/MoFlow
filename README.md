@@ -240,6 +240,8 @@ python3 imle_sdd.py --exp <exp_name> --rotate --rotate_time_frame 6 --eval --sav
 --checkpt_freq 1 --epochs 50 --batch_size 48 --init_lr 1e-4 --num_to_gen 20 
 ```
 
+To train your own versions of the teacher and student models, please specify the `--cfg` flag with the path to the corresponding configuration file. The hyperparameters are defined in YAML files such as `cor_fm.yml` and `imle.yml`. You may either create a custom configuration file or use command-line arguments to override specific hyperparameters — such as the learning rate, preprocessed rotation, epochs etc. to search for the best set of hyperparameters.
+
 ### Suggestions
 We recommend running `python -h *.py` to explore how configuration files are read from the `./cfg/` directory and the usage of other arguments. Once familiar, you can create your own custom config files.
 
@@ -249,7 +251,7 @@ We recommend running `python -h *.py` to explore how configuration files are rea
 - [x] ~~Training scripts~~
 - [x] ~~Evaulation scripts~~
 - [x] ~~Environment setup & config files~~
-- [ ] Model Checkpoints
+- [x] ~~Model Checkpoints~~
 
 ## 📚 Citation
 If you find our code useful, please consider cite our paper:
