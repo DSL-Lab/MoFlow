@@ -164,9 +164,9 @@ python eval_sdd.py --ckpt_path <path_to_sdd_teacher_checkpoint> \
 
 
 
-Let's train our IMLE student model now.
+Let's train our IMLE student model now. First, we need to move the pickle files containing the teacher MoFlow samples from `/samples` to `/data/[datasets]/imle/`. 
 
-3. **Student Model Training**
+1. **Student Model Training**
 ```bash
 ### NBA dataset
 python3 imle_nba.py --exp <exp_name> \

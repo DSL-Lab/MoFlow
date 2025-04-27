@@ -154,6 +154,7 @@ class ETHDataset(object):
 
         """load distillation target"""
         if imle:
+            os.makedirs(os.path.join(data_dir, f'imle/{subset}'), exist_ok=True)
             pkl_ls = sorted(glob.glob(os.path.join(data_dir, f'imle/{subset}/*train*.pkl')))
 
             keys_ls = ['past_traj', 'fut_traj', 'past_traj_original_scale', 'fut_traj_original_scale', 'fut_traj_vel', 'y_t', 'y_pred_data']
