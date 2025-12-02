@@ -1,12 +1,12 @@
 # ------------------- General Options -------------------------
 description                  : Correlated FlowMatching
-results_root_dir             : results_rat
-dataset                      : rat
+results_root_dir             : results_babel
+dataset                      : babel
 
 # ------------------- Dataset -------------------------
 past_frames                  : 30
 future_frames                : 30
-agents                       : 8
+agents                       : 22
 dt                           : 0.033
 #traj_mean                    : [14, 7.5]
 
@@ -31,21 +31,21 @@ notes                        : 'Flow Matching'
 # ---------------------------- Configurations for model ----------------------------
 MODEL:
     NUM_PROPOSED_QUERY: 20
-    MODEL_OUT_DIM: 60
-    REGRESSION_MLPS: [128, 256, 64, 2]
+    MODEL_OUT_DIM: 90
+    REGRESSION_MLPS: [128, 256, 64, 3]
     CLASSIFICATION_MLPS: [128, 128, 1]
 
     USE_PE_QUERY: True
     USE_PE_AGENT: True
 
-    COND_D_CUE: 7
-    COND_D_HIST: 7
+    COND_D_CUE: 13
+    COND_D_HIST: 16
     COG_D_Z: 64
     CONTEXT_ENCODER:
         NAME: MTREncoder
-        DATA_TYPE: rat
-        NUM_OF_ATTN_NEIGHBORS: 8
-        NUM_INPUT_CONTEXT: 6
+        DATA_TYPE: babel
+        NUM_OF_ATTN_NEIGHBORS: 22
+        NUM_INPUT_CONTEXT: 9
 
         NUM_CHANNEL_IN_MLP_AGENT: 256
         NUM_LAYER_IN_MLP_AGENT: 3
@@ -68,10 +68,10 @@ k_preds                      : 20
 
 # ------------------------------- Optimizer Parameters ---------------------------------
 train_batch_size             : 64
-test_batch_size              : 1000
+test_batch_size              : 64
 
 OPTIMIZATION:
-    NUM_EPOCHS: 600
+    NUM_EPOCHS: 150
 
     OPTIMIZER: AdamW
     LR: 0.001

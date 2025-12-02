@@ -72,17 +72,17 @@ class MTRDecoder(nn.Module):
             # K-to-K self-attention
             # print("cur_query shape 1 = {}".format(cur_query.shape))
 
-            # cur_query = rearrange(query_token, 'b k a t d -> (b a t) k d')
-            cur_query = rearrange(query_token, 'b k a d -> (b a) k d')
+            cur_query = rearrange(query_token, 'b k a t d -> (b a t) k d')
+            # cur_query = rearrange(query_token, 'b k a d -> (b a) k d')
             cur_query = self.self_attn_K[i](cur_query)
 
             # A-to-A self-attention
-            # cur_query = rearrange(cur_query, '(b a t) k d -> (b k t) a d', b=B, a=A, k=K)
-            cur_query = rearrange(cur_query, '(b a) k d -> (b k) a d', b=B, a=A, k=K)
+            cur_query = rearrange(cur_query, '(b a t) k d -> (b k t) a d', b=B, a=A, k=K)
+            # cur_query = rearrange(cur_query, '(b a) k d -> (b k) a d', b=B, a=A, k=K)
             cur_query = self.self_attn_A[i](cur_query)
 
             # reshape
-            cur_query = rearrange(cur_query, '(b k) a d -> b k a d', b=B, a=A, k=K)
+            cur_query = rearrange(cur_query, '(b k t) a d -> b k a t d', b=B, a=A, k=K)
 
         return cur_query
     

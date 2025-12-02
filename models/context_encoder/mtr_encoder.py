@@ -15,6 +15,7 @@ class SinusoidalPosEmb(nn.Module):
 
     def forward(self, x):
         device = x.device
+        # print("x device = {}".format(device))
         half_dim = self.dim // 2
         emb = math.log(self.theta) / (half_dim - 1)
         emb = torch.exp(torch.arange(half_dim, device=device) * -emb)
@@ -23,7 +24,7 @@ class SinusoidalPosEmb(nn.Module):
         return emb
 
 class MTREncoder(nn.Module):
-    def __init__(self, config, use_pre_norm):
+    def __init__(self, config, use_pre_norm, device):
         super().__init__()
         self.model_cfg = config
         dim = self.model_cfg.D_MODEL
@@ -34,14 +35,16 @@ class MTREncoder(nn.Module):
             hidden_dim=self.model_cfg.NUM_CHANNEL_IN_MLP_AGENT,
             num_layers=self.model_cfg.NUM_LAYER_IN_MLP_AGENT,
             out_channels=dim
-        )
+        ).to(device)
+        # print("device = {}".format(device))
+
         # Positional encoding
         self.pos_encoding = nn.Sequential(
                 SinusoidalPosEmb(dim, theta = 10000),
                 nn.Linear(dim, dim),
                 nn.ReLU(),
                 nn.Linear(dim, dim)
-            )
+            ).to(device)
         self.team_one_query_embedding = nn.Embedding(1, dim)
         self.team_two_query_embedding = nn.Embedding(1, dim)
         self.ball_query_embedding = nn.Embedding(1, dim)
@@ -60,8 +63,10 @@ class MTREncoder(nn.Module):
                                                 batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(self.layer, num_layers=self.model_cfg.NUM_ATTN_LAYERS)
         self.num_out_channels = dim
-
-        self.max_agents = 8
+        if self.model_cfg.DATA_TYPE == 'rat':
+            self.max_agents = 8
+        elif self.model_cfg.DATA_TYPE == 'babel':
+            self.max_agents = 22
         self.agent_index_embed = nn.Embedding(self.max_agents, dim)
 
         # 定义关键点类型数，例如：0=后爪, 1=前爪, 2=头颈, 3=脊柱, 4=尾根
@@ -70,10 +75,29 @@ class MTREncoder(nn.Module):
 
         # 关键点到类型的映射（按你的索引顺序，示例：右/左后爪, 右/左前爪, 尾根, 头, 颈, 脊柱）
         # 例如： [RR_paw, LR_paw, RF_paw, LF_paw, tail_root, head, neck, spine]
-        self.register_buffer(
-            "kp_type_ids",
-            torch.tensor([0, 0, 1, 1, 4, 2, 2, 3], dtype=torch.long)  # len=8
-        )
+        if self.model_cfg.DATA_TYPE == 'rat':
+            self.register_buffer(
+                "kp_type_ids",
+                torch.tensor([0, 0, 1, 1, 4, 2, 2, 3], dtype=torch.long)  # len=8
+            )
+        elif self.model_cfg.DATA_TYPE == 'babel':
+            kp_type_ids = torch.tensor([
+                0,  # 0 pelvis
+                1, 1,  # 1-2 左/右hip
+                0,  # 3 spine1
+                1, 1,  # 4-5 左/右 knee
+                0,  # 6 spine2
+                1, 1,  # 7-8 左/右 ankle
+                0,  # 9 spine3
+                1, 1,  # 10-11 左/右 foot
+                2,  # 12 neck
+                3, 3,  # 13-14 左/右 collar
+                2,  # 15 head
+                3, 3,  # 16-17 左/右 shoulder
+                4, 4, 4, 4  # 18-21 左/右 elbow + wrist
+            ], dtype=torch.long)
+            self.register_buffer("kp_type_ids", kp_type_ids)
+
 
     ### polyline encoder MLP
     def build_polyline_encoder(self, in_channels, hidden_dim, num_layers, num_pre_layers=1, out_channels=None):
@@ -84,6 +108,7 @@ class MTREncoder(nn.Module):
             num_pre_layers=num_pre_layers,
             out_channels=out_channels
         )
+
         return ret_polyline_encoder
     
     # def agent_query_embedding(self, index):
@@ -115,11 +140,15 @@ class MTREncoder(nn.Module):
         Args: [Batch size, Number of agents, Number of time frames, 6]
 
         """
+        # print("past_traj.device = {}".format(past_traj.device))
         past_traj_mask = torch.ones_like(past_traj[..., 0], dtype=torch.bool).to(past_traj.device)
+
+        self.agent_polyline_encoder.to(device=past_traj.device)
+        # print("aaa agent_polyline_encoder first layer device:", next(self.agent_polyline_encoder.parameters()).device)
         obj_polylines_feature = self.agent_polyline_encoder(past_traj, past_traj_mask)  # (num_center_objects, num_objects, C)
         A = obj_polylines_feature.shape[1]
         device = past_traj.device
-
+        # print("123321 past_traj.device = {}".format(device))
         ### use positional encoding pm A
         # pos_encoding = self.pos_encoding(torch.arange(obj_polylines_feature.shape[1]).to(past_traj.device)) #[A, D]
         pos_encoding = self.pos_encoding(torch.arange(A, device=device))

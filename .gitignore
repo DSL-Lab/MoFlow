@@ -217,3 +217,7 @@ data/rat/rat_ver2_smooth_3030_2/
 data/rat/rat_ver2_smooth_k5_3030
 
 visualize/viz/
+
+data/babel/
+data_generator/unzip_bz2.py
+visualize/result/

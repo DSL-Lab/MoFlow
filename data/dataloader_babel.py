@@ -69,7 +69,7 @@ def seq_collate_imle_train(batch):
     return data
 
 
-class RatDatasetMinMax(Dataset):
+class BabelDatasetMinMax(Dataset):
     """
     读取你的大鼠关键点数据，组织为 [N, T_total, V=8, 2]，再切 [T_h | T_p]
     """
@@ -77,7 +77,7 @@ class RatDatasetMinMax(Dataset):
                  obs_len=12, pred_len=18, training=True,
                  num_scenes=None, test_scenes=None,
                  overfit=False, imle=False, cfg=None,
-                 data_dir='data/rat', data_file='hist10pred20/rat_train.npy',
+                 data_dir='data/babel', data_file='hist10pred20/rat_train.npy',
                  data_norm='min_max'):
         super().__init__()
         self.obs_len  = obs_len
@@ -92,14 +92,14 @@ class RatDatasetMinMax(Dataset):
 
         if not overfit:
             if training:
-                data_root = os.path.join(data_dir, 'rat_ver2_smooth_3030_2/rat_pose_train.npy')
-                cmd_root = os.path.join(data_dir, 'rat_ver2_smooth_3030_2/rat_stim_train.npy')
+                data_root = os.path.join(data_dir, 'babel_train.npy')
+                cmd_root = os.path.join(data_dir, 'babel_train_cmd.npy')
             else:
-                data_root = os.path.join(data_dir, 'rat_ver2_smooth_3030_2/rat_pose_test.npy')
-                cmd_root = os.path.join(data_dir, 'rat_ver2_smooth_3030_2/rat_stim_test.npy')
+                data_root = os.path.join(data_dir, 'babel_val.npy')
+                cmd_root = os.path.join(data_dir, 'babel_val_cmd.npy')
         else:
-            data_root = os.path.join(data_dir, 'rat_ver2_smooth_3030_2/rat_pose_train.npy')
-            cmd_root = os.path.join(data_dir, 'rat_ver2_smooth_3030_2/rat_stim_train.npy')
+            data_root = os.path.join(data_dir, 'babel_test.npy')
+            cmd_root = os.path.join(data_dir, 'babel_test_cmd.npy')
 
         self.trajs_raw = np.load(data_root) #(N,15,11,2)
         self.cmd_raw = np.load(cmd_root)
@@ -116,6 +116,8 @@ class RatDatasetMinMax(Dataset):
         if overfit:
             self.trajs = self.trajs_raw[:num_scenes]
             self.cmd = self.cmd_raw[:num_scenes]
+
+        # print("cmd shape = {}".format(self.cmd.shape))
 
         self.data_len = len(self.trajs)
         self.traj_abs = torch.from_numpy(self.trajs).float()  # [N, T, V, 2]
@@ -144,28 +146,28 @@ class RatDatasetMinMax(Dataset):
         if training:
             stats = {}
             # 绝对位置
-            abs_xy = past_abs.reshape(-1, 2)  # [N*T*V, 2]
-            stats['abs_mean'] = abs_xy.mean(0)
-            stats['abs_std'] = abs_xy.std(0) + 1e-6
-            stats['abs_min'], stats['abs_max'] = self.robust_minmax(abs_xy)
+            abs_xyz = past_abs.reshape(-1, 3)  # [N*T*V, 2]
+            stats['abs_mean'] = abs_xyz.mean(0)
+            stats['abs_std'] = abs_xyz.std(0) + 1e-6
+            stats['abs_min'], stats['abs_max'] = self.robust_minmax(abs_xyz)
 
             # 相对位移
-            rel_xy = past_rel.reshape(-1, 2)
-            stats['rel_mean'] = rel_xy.mean(0)
-            stats['rel_std'] = rel_xy.std(0) + 1e-6
-            stats['rel_min'], stats['rel_max'] = self.robust_minmax(rel_xy)
+            rel_xyz = past_rel.reshape(-1, 3)
+            stats['rel_mean'] = rel_xyz.mean(0)
+            stats['rel_std'] = rel_xyz.std(0) + 1e-6
+            stats['rel_min'], stats['rel_max'] = self.robust_minmax(rel_xyz)
 
             # 速度
-            vel_xy = past_vel.reshape(-1, 2)
-            stats['vel_mean'] = vel_xy.mean(0)
-            stats['vel_std'] = vel_xy.std(0) + 1e-6
-            stats['vel_min'], stats['vel_max'] = self.robust_minmax(vel_xy)
+            vel_xyz = past_vel.reshape(-1, 3)
+            stats['vel_mean'] = vel_xyz.mean(0)
+            stats['vel_std'] = vel_xyz.std(0) + 1e-6
+            stats['vel_min'], stats['vel_max'] = self.robust_minmax(vel_xyz)
 
             # 未来相对位移
-            fut_xy = fut_traj.reshape(-1, 2)
-            stats['fut_mean'] = fut_xy.mean(0)
-            stats['fut_std'] = fut_xy.std(0) + 1e-6
-            stats['fut_min'], stats['fut_max'] = self.robust_minmax(fut_xy)
+            fut_xyz = fut_traj.reshape(-1, 3)
+            stats['fut_mean'] = fut_xyz.mean(0)
+            stats['fut_std'] = fut_xyz.std(0) + 1e-6
+            stats['fut_min'], stats['fut_max'] = self.robust_minmax(fut_xyz)
 
             cfg.stats = stats
             cfg.fut_traj_max  = None
@@ -189,7 +191,7 @@ class RatDatasetMinMax(Dataset):
             self.fut_traj  = fut_traj
 
         self.data_len = self.traj_abs.shape[0]
-        print(f"RatDataset: size {self.data_len} | mode={'train' if training else 'test'}")
+        print(f"Babel Dataset: size {self.data_len} | mode={'train' if training else 'test'}")
 
         # IMLE 蒸馏数据（如使用）
         if imle:
@@ -247,61 +249,6 @@ class RatDatasetMinMax(Dataset):
         return hist_feats
 
     @torch.no_grad()
-    def compute_cue_feats(
-            self,
-            instr_id: torch.Tensor,  # [T_h], int64, 0=none, 1=fwd, 2=left, 3=right
-            instr_strength: torch.Tensor,  # [T_h], float, 建议≥0
-            add_time_since: bool = True,
-            use_strength_for_event: bool = True,  # 计算“最近一次指令”时，是否要求强度>0
-    ) -> torch.Tensor:
-        """
-        返回: cue_feats [T_h, C_c]，列含义:
-          0-3: onehot of {none,fwd,left,right}
-          4  : strength (无指令处置0)
-          5  : signed_strength (左负右正，前进/无指令为0)
-          6  : time_since_last_cmd (从最近一次“有效指令”起的步数；无历史则从0累加)
-        """
-        assert instr_id.ndim == 1 and instr_strength.ndim == 1
-        T = instr_id.shape[0]
-        device = instr_id.device
-
-        # --- 1) one-hot 类别（4类，包含“无指令”）
-        onehot = F.one_hot(instr_id.long(), num_classes=4).float()  # [T,4]
-
-        # --- 2) 强度：仅在有指令(>0)时保留，否则置0，避免把“无指令”的强度带入模型
-        has_cmd = (instr_id > 0)
-        strength = torch.where(has_cmd, instr_strength, torch.zeros_like(instr_strength))
-        strength = strength.view(T, 1)  # [T,1]
-
-        # --- 3) 符号强度：左负右正，前进/无指令=0
-        #     这里“方向”只由类别决定，不受强度正负影响（若你的电压有符号，可以再乘一个 sign(strength)）
-        sign = torch.zeros_like(instr_strength)
-        sign = torch.where(instr_id == 2, -1.0, sign)  # left  -> -1
-        sign = torch.where(instr_id == 3, 1.0, sign)  # right -> +1
-        signed_strength = (sign * strength.view(-1)).view(T, 1)  # [T,1]
-
-        feats = [onehot, strength, signed_strength]
-
-        # --- 4) 最近一次有效指令的时间（步数）
-        if add_time_since:
-            # “有效指令”定义：instr_id>0 且（若 use_strength_for_event=True 则 strength>0）
-            if use_strength_for_event:
-                event_mask = has_cmd & (instr_strength > 0)
-            else:
-                event_mask = has_cmd
-
-            idx = torch.arange(T, device=device)
-            last_idx = torch.where(event_mask, idx, torch.full_like(idx, -1))
-            # 前缀最大：获得每一步最近一次事件的下标
-            cum_last, _ = torch.cummax(last_idx, dim=0)  # [-1, ..., t_last, ...]
-            time_since = (idx - cum_last).clamp(min=0).to(torch.float32).view(T, 1)
-            feats.append(time_since)
-
-        # 拼接输出
-        cue_feats = torch.cat(feats, dim=-1)  # [T, 4(+1+1+1)=7]
-        return cue_feats
-
-    @torch.no_grad()
     def compute_zc(
             self,
             hist_feats: torch.Tensor,  # [V, T_h, C_h]
@@ -338,13 +285,13 @@ class RatDatasetMinMax(Dataset):
         past = self.past_traj_original_scale[index][..., :2]  # [V,T_h,2] 取绝对坐标那两维
         fut = self.fut_traj_original_scale[index]  # [V,T_p,2]
 
-        # 2) cue 的原始输入（示例：你应从日志里读到这两条）
-        instr_id = torch.from_numpy(self.cmd[index, :, 0])  # [T_h + T_f] 0/1/2
-        instr_strength = torch.from_numpy(self.cmd[index, :, 1])  # [T_h + T_f] float
+        # # 2) cue 的原始输入（示例：你应从日志里读到这两条）
+        # instr_id = torch.from_numpy(self.cmd[index, :, 0])  # [T_h + T_f] 0/1/2
+        # instr_strength = torch.from_numpy(self.cmd[index, :, 1])  # [T_h + T_f] float
 
         # 3) 计算四个核心特征
         hist_feats = self.compute_hist_feats(past, dt=self.dt, head_idx=self.head_idx, neck_idx=self.neck_idx)  # [V,T_h,C_h]
-        cue_feats = self.compute_cue_feats(instr_id, instr_strength)  # [T_h,C_c]
+        cue_feats = torch.from_numpy(self.cmd[index, :, :])
         # z_d_logits = self.compute_zd_logits(hist_feats, cue_feats, s_thr=self.s_thr, r_thr=self.r_thr, tau=self.tau)  # [V,T_h,4]
         # z_c = self.compute_zc(hist_feats, cue_feats, stats=None)  # [V,T_h,4]
 
@@ -367,7 +314,7 @@ class RatDatasetMinMax(Dataset):
         return lo, hi
 
     def z(self, x, mean, std):
-        print("Normalize shape = {}".format(x.shape))
+        # print("Normalize shape = {}".format(x.shape))
         return (x - mean) / std
 
     def iz(self, zx, mean, std):

@@ -240,4 +240,4 @@ def main():
 if __name__ == "__main__":
 	main()
 
-# python eval_rat.py --ckpt_path D:\04_code\MoFlow\results_nba\cor_fm\rat_30_30_1115_cue_film_TN_NN_A_REG_S_subset4144_min_max_LR0.0001_WD0.05_BS512_EP600\models\checkpoint_last.pt --batch_size 1000 --sampling_steps 100 --solver lin_poly --lin_poly_p 5 --lin_poly_long_step 1000 --save_samples
+# python eval_rat.py --ckpt_path D:\04_code\MoFlow\results_rat\sde_earlyfuse_best\rat_30_30_1124_TN_NN_A_REG_S_subset4144_min_max_LR0.0001_WD0.05_BS96_EP600\models\checkpoint_best.pt --batch_size 1000 --sampling_steps 100 --solver lin_poly --lin_poly_p 5 --lin_poly_long_step 1000 --save_samples

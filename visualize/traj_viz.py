@@ -1,6 +1,88 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import numpy as np
+
+
+import numpy as np
+
+def compute_bounding_box(history_pos,
+                         preds_pos,
+                         gt_pos,
+                         padding: int = 10,
+                         square: bool = False):
+    """
+    计算三条轨迹的最小 bounding box，并可选地扩展为正方形视野。
+
+    参数
+    ----
+    history_pos : np.ndarray, shape (Th, 2)
+    preds_pos   : list[np.ndarray(Tf, 2)] 或 np.ndarray, shape (K, Tf, 2)
+    gt_pos      : np.ndarray, shape (Tf, 2)
+    padding     : int, 在四周额外扩展的边距（坐标同单位）
+    square      : bool, 若为 True，则：
+                  - 令 side = max(xmax - xmin, ymax - ymin)
+                  - 以 bbox 中心为中心取正方形区域
+                  - 再在此基础上加 padding
+    返回
+    ----
+    xmin, xmax, ymin, ymax : int
+    """
+
+    # -------- 处理 preds_pos 到统一形状 (N_pred, 2) --------
+    if isinstance(preds_pos, list):
+        if len(preds_pos) > 0:
+            preds_stack = np.concatenate(preds_pos, axis=0)  # (K*Tf, 2)
+        else:
+            preds_stack = np.zeros((0, 2), dtype=float)
+    else:
+        # np.ndarray (K, Tf, 2)
+        preds_stack = preds_pos.reshape(-1, 2) if preds_pos.size > 0 else \
+                      np.zeros((0, 2), dtype=float)
+
+    # -------- 合并所有点 --------
+    all_points = np.concatenate([history_pos, preds_stack, gt_pos], axis=0)
+    xs = all_points[:, 0]
+    ys = all_points[:, 1]
+
+    xmin_raw = xs.min()
+    xmax_raw = xs.max()
+    ymin_raw = ys.min()
+    ymax_raw = ys.max()
+
+    if not square:
+        # 普通矩形 bbox，直接在原 bbox 上加 padding
+        xmin = xmin_raw - padding
+        xmax = xmax_raw + padding
+        ymin = ymin_raw - padding
+        ymax = ymax_raw + padding
+    else:
+        # 正方形模式：以原 bbox 中心为中心，边长取 max(width, height)
+        width  = xmax_raw - xmin_raw
+        height = ymax_raw - ymin_raw
+        side = max(width, height)
+
+        cx = 0.5 * (xmin_raw + xmax_raw)
+        cy = 0.5 * (ymin_raw + ymax_raw)
+
+        half = side / 2.0
+
+        xmin = cx - half - padding
+        xmax = cx + half + padding
+        ymin = cy - half - padding
+        ymax = cy + half + padding
+
+    # 返回整数（向下/向上取整）
+    xmin = int(np.floor(xmin))
+    xmax = int(np.ceil(xmax))
+    ymin = int(np.floor(ymin))
+    ymax = int(np.ceil(ymax))
+
+    return xmin, xmax, ymin, ymax
+
+
+
+
 def plot_traj_with_heading_and_stim(
     history_pos: np.ndarray,      # (Th, 2)  历史“质心”轨迹
     preds_pos,                    # list[(Tf,2)] 或 (K, Tf, 2) 预测质心轨迹
@@ -118,10 +200,15 @@ def plot_traj_with_heading_and_stim(
     ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
 
     ax.legend(frameon=False, loc="best")
+
+    xmin, xmax, ymin, ymax = compute_bounding_box(
+        history_pos, preds_pos, gt_pos, padding=5, square=True
+    )
+
     # plt.xlim(0, 640)
-    plt.xlim(history_pos[-1, 0] - 100, history_pos[-1, 0] + 100)
+    ax.set_xlim(xmin, xmax)
     # plt.ylim(0, 480)
-    plt.ylim(history_pos[-1, 1] - 100, history_pos[-1, 1] + 100)
+    ax.set_ylim(ymin, ymax)
     plt.tight_layout()
     return fig, ax
 
@@ -131,10 +218,10 @@ def data_preprocess(pred_trajs, hits_trajs, cue_trajs):
 
 if __name__ == "__main__":
     # ['rRP', 'lRP', 'rFP', 'lFP', 'tail_root', 'head', 'neck', 'spine']
-    pred_trajs = np.load("./visualize/trajs/pred_trajs.npy")
-    hist_trajs = np.load("./visualize/trajs/hist_trajs.npy")
-    cue_trajs = np.load("./visualize/trajs/hist_cue_trajs.npy")
-    fut_gt_trajs = np.load("./visualize/trajs/fut_gt_trajs.npy")
+    pred_trajs = np.load("./trajs/cond/pred_trajs.npy")
+    hist_trajs = np.load("./trajs/cond/hist_trajs.npy")
+    cue_trajs = np.load("./trajs/cond/hist_cue_trajs.npy")
+    fut_gt_trajs = np.load("./trajs/cond/fut_gt_trajs.npy")
 
     print("pred_trajs shape = {}".format(pred_trajs.shape))
     print("hist_trajs shape = {}".format(hist_trajs.shape))
@@ -167,4 +254,5 @@ if __name__ == "__main__":
             hist_neck=hist_neck,
             stim_types=stim_types
         )
-        plt.savefig("./visualize/viz/visual_{}.png".format(idx))
+
+        fig.savefig("./result/cond/visual_{}.png".format(idx), dpi=300)

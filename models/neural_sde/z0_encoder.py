@@ -58,6 +58,8 @@ class Z0Encoder(nn.Module):
         # 把 [J, D] 展平成一维特征
         # kp_feat = hist_kp.reshape(B, Th, J * D)            # [B, Th, J*D]
         kp_feat = rearrange(hist_kp, 'b j Th d -> b Th (j d)')
+        # print("kp_feat shape = {}".format(kp_feat.shape))
+        # print("hist_stim shape = {}".format(hist_stim.shape))
 
         x = torch.cat([kp_feat, hist_stim], dim=-1)        # [B, Th, J*D+stim_dim]
         # print("x shape = {}".format(x.shape))

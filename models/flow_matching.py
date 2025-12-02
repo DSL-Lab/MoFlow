@@ -223,7 +223,7 @@ class FlowMatcher(nn.Module):
 
         # model_out, pred_score = self.model(y_t_in, t, x_data = x)
         model_out = self.model(y_t_in, t, x_data = x)
-        pred_score = torch.tensor(0, device="cuda:0")
+        pred_score = torch.tensor(0, device=self.device)
         y_data_at_t = self.fm_wrapper_func(y_t, t, model_out)            # [B, K, A, F * D]
 
         if self.objective == 'pred_vel':
@@ -255,7 +255,7 @@ class FlowMatcher(nn.Module):
                 batch_min_ade_approx = error_metric.norm(dim=-1, p=2).mean(dim=-1).min(dim=-1).values.mean()
                 if this_t == 0.0:
                     self.logger.info("{}".format("-" * 50))
-                # self.logger.info("Sampling time step: {:.3f}, batch minADE approx: {:.4f}".format(this_t, batch_min_ade_approx))
+                self.logger.info("Sampling time step: {:.3f}, batch minADE approx: {:.4f}".format(this_t, batch_min_ade_approx))
                 # self.logger.info("Sampling time step: {:.3f}".format(this_t))
 
             pred_vel = self.predict_vel_from_data(y_data_at_t, y_t, t)
@@ -404,7 +404,7 @@ class FlowMatcher(nn.Module):
         # 把最后一维 T*D 还原成 [T, D]
         denoised_y = rearrange(denoised_y, 'b k a (f d) -> b k a f d', f=self.cfg.future_frames)
         # 同样处理GT（注意 fut_traj_normalized 此刻是 [B,K,A,T*D]，还原成 [B,K,A,T,2]）
-        fut_traj_normalized = fut_traj_normalized.view(B, K, A, T, 2)
+        fut_traj_normalized = fut_traj_normalized.view(B, K, A, T, -1)
         # 根据 data_norm 反归一化到“评估/物理单位”（像素或厘米）
         if self.cfg.get('data_norm', None) == 'min_max':
             # denoised_y_metric = unnormalize_min_max(denoised_y, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1) 		 # [B, K, A, T, D]
@@ -434,7 +434,7 @@ class FlowMatcher(nn.Module):
 
         # ---------- 均值绝对误差（或平方误差） ----------
         # 逐agent逐帧L2误差：||pred-gt||_2，形状 [B,K,A,T]
-        denoising_error_per_agent = (denoised_y_metric_xy - fut_traj_metric).view(B, K, A, T, 2).norm(dim=-1)  	 # [B, K, A, T]
+        denoising_error_per_agent = (denoised_y_metric_xy - fut_traj_metric).view(B, K, A, T, -1).norm(dim=-1)  	 # [B, K, A, T]
 
         # 可选：把L2误差平方，等价于 MSE 的根去掉（按需求）
         if self.cfg.get('LOSS_REG_SQUARED', False):

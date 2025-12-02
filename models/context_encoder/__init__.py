@@ -8,11 +8,12 @@ __all__ = {
 }
 
 
-def build_context_encoder(config, use_pre_norm):
+def build_context_encoder(config, use_pre_norm, device):
     # 从注册表中取出类名对应的类，然后实例化
     model = __all__[config.NAME](
         config=config,
-        use_pre_norm=use_pre_norm
-    )
+        use_pre_norm=use_pre_norm,
+        device=device
+    ).to(device=device)
 
     return model

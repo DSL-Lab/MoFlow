@@ -20,14 +20,13 @@ class MotionTransformer(nn.Module):
         self.dim = self.model_cfg.CONTEXT_ENCODER.D_MODEL # 统一的通道维（上下游对齐）
         self.config = config
         self.logger = logger
-
         use_pre_norm = self.model_cfg.get('USE_PRE_NORM', False)
 
         assert not use_pre_norm, "Pre-norm is not supported in this model"
         self.T_f = self.config.get('future_frames', 0)
         self.dt = self.config.get('dt', 0)
         # （1）上下文编码器：把历史轨迹/邻居信息编码成每个 agent 的上下文向量
-        self.context_encoder = build_context_encoder(self.model_cfg.CONTEXT_ENCODER, use_pre_norm)
+        self.context_encoder = build_context_encoder(self.model_cfg.CONTEXT_ENCODER, use_pre_norm, config.device)
 
         # update 2: 将原有的条件/指令编码器 + 注入层 改为神经动力系统
         # if code_version == "1.0":
@@ -54,16 +53,16 @@ class MotionTransformer(nn.Module):
             # self.cond_film_beta  = nn.Linear(self.dim, self.dim)
 
         self.z0_encoder = Z0Encoder(
-            num_keypoints=8,
-            kp_dim=6,
-            stim_dim=7,
+            num_keypoints=self.config.agents,
+            kp_dim=9,
+            stim_dim=self.model_cfg.get('COND_D_CUE', 0),
             hidden_dim=self.dim,
             z_dim=self.model_cfg.get('COG_D_Z', 0)
         )
 
         self.neural_sde = ControlledSSLSDE(
             z_dim=self.model_cfg.get('COG_D_Z', 0),
-            stim_dim=7,
+            stim_dim=self.model_cfg.get('COND_D_CUE', 0),
             num_regimes=3,
             num_bases=16,
             hidden_dim=self.dim,
@@ -222,6 +221,7 @@ class MotionTransformer(nn.Module):
         #     y = y.reshape((-1, 20, 8, 40))
 
         device = y.device
+        # print("y device = {}".format(device))
         B, K, A, _ = y.shape
 
         # （1）上下文编码：根据历史（及邻居）得到每个 agent 的上下文向量 [B, A, D]
@@ -319,19 +319,20 @@ class MotionTransformer(nn.Module):
         emb_in = torch.cat((encoder_out_batch, y_emb, t_emb_batch), dim=-1)
         emb_fusion = self.init_emb_fusion_mlp(emb_in)	 	# [B, K, A, D]
         # # 11-24 尝试在此处融合，效果显著，出于对比考虑修改
-        # emb_fusion = emb_fusion.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1) # [B, K, A, T, D]
-        # emb_fusion = emb_fusion * (1 + gamma) + beta        # [B, K, A, T, D]
-        # a_pe_batch = a_pe_batch.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1)
-        # k_pe_batch = k_pe_batch.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1)
+        emb_fusion = emb_fusion.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1) # [B, K, A, T, D]
+        emb_fusion = emb_fusion * (1 + gamma) + beta        # [B, K, A, T, D]
+        a_pe_batch = a_pe_batch.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1)
+        k_pe_batch = k_pe_batch.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1)
 
         query_token = self.post_pe_cat_mlp(self.apply_PE(emb_fusion, k_pe_batch, a_pe_batch)) 								# [B, K, A, D]
         # print("query token shape = {}".format(query_token.shape))
         # query_token = rearrange(query_token, 'b k a t d -> b (k a t) d')
         readout_token = self.motion_decoder(query_token, t_emb)													# [B, K, A, D]
         # print("readout token shape = {}".format(readout_token.shape))
+
         # # 11-25 尝试在后期融合z
-        readout_token = readout_token.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1) # [B, K, A, T, D]
-        readout_token = readout_token * (1.0 + gamma) + beta  # [B,K,A,T_f,D]
+        # readout_token = readout_token.unsqueeze(3).repeat(1, 1, 1, self.T_f, 1) # [B, K, A, T, D]
+        # readout_token = readout_token * (1.0 + gamma) + beta  # [B,K,A,T_f,D]
 
         # （8）读出：回归分支输出 T*D，分类分支输出 [B,K,A] 的打分
         denoiser_x = self.reg_head(readout_token)  										# [B, K, A, F * D]
@@ -356,7 +357,7 @@ class IMLETransformer(nn.Module):
 
         assert not use_pre_norm, "Pre-norm is not supported in this model"
 
-        self.context_encoder = build_context_encoder(self.model_cfg.CONTEXT_ENCODER, use_pre_norm)
+        self.context_encoder = build_context_encoder(self.model_cfg.CONTEXT_ENCODER, use_pre_norm, config.device)
 
         ### serves the purpose of positional encoding
         if self.objective == 'set':

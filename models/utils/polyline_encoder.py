@@ -17,6 +17,10 @@ class PointNetPolylineEncoder(nn.Module):
             mlp_channels=[hidden_dim] * num_pre_layers,
             ret_before_act=False
         )
+
+        # print("aaa pre_mlps first layer device:", next(self.pre_mlps.parameters()).device)
+
+
         self.mlps = common_layers.build_mlps(
             c_in=hidden_dim * 2,
             mlp_channels=[hidden_dim] * (num_layers - num_pre_layers),
@@ -42,6 +46,10 @@ class PointNetPolylineEncoder(nn.Module):
         batch_size, num_polylines,  num_points_each_polylines, C = polylines.shape
 
         # pre-mlp
+        # print("polylines device:", polylines.device)
+        # print("polylines_mask device:", polylines_mask.device)
+        # print("pre_mlps first layer device:", next(self.pre_mlps.parameters()).device)
+
         polylines_feature_valid = self.pre_mlps(polylines[polylines_mask])  # (N, C)
         polylines_feature = polylines.new_zeros(batch_size, num_polylines,  num_points_each_polylines, polylines_feature_valid.shape[-1])
         polylines_feature[polylines_mask] = polylines_feature_valid
