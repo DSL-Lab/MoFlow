@@ -85,9 +85,9 @@ This project supports three major trajectory datasets:
   - **`nba/`**: Contains `nba_train.npy` and `nba_test.npy`.
   - **`sdd/`**: Includes `sdd_train.pkl`, `sdd_test.pkl`, and NSP variants (`sdd_nsp_train.pkl`).
   - **`store_pickle_eth_files.py`**: Utility for processing ETH dataset files.
-- **`eval_*.py`**: Evaluation scripts for ETH (`eval_eth.py`, `eval_imle_eth.py`), NBA (`eval_nba.py`, `eval_imle_nba.py`), and SDD (`eval_sdd.py`).
+- **`eval_*.py`**: Evaluation scripts for ETH (`eval_eth.py`), NBA (`eval_nba.py`), and SDD (`eval_sdd.py`).
 - **`fm_*.py`**: Flow-matching scripts for ETH (`fm_eth.py`), NBA (`fm_nba.py`), and SDD (`fm_sdd.py`).
-- **`imle_*.py`**: IMLE scripts for ETH (`imle_eth.py`), NBA (`imle_nba.py`), and SDD beetlejuice(`imle_sdd.py`).
+- **`imle_*.py`**: IMLE scripts for ETH (`imle_eth.py`), NBA (`imle_nba.py`), and SDD (`imle_sdd.py`).
 - **`images/`**: Visual assets, including `moflow-architecture.png` and `moflow-imle.png`.
 - **`models/`**: Model definitions and utilities:
   - **Core files**: `backbone.py`, `backbone_eth_ucy.py`, `flow_matching.py`, `imle.py`.
