@@ -35,8 +35,8 @@ def parse_config():
 	parser.add_argument('--batch_size', default=256, type=int, help='Override the batch size in the config file.')
 	parser.add_argument('--data_dir', type=str, default='./data/rat', help='Directory where the data is stored.')
 	parser.add_argument('--overfit', default=False, action='store_true', help='Overfit the testing set by setting it to the same entries as the training set.')
-	parser.add_argument('--n_train', type=int, default=4144, help='Number training scenes used.')
-	parser.add_argument('--n_test', type=int, default=1184, help='Number testing scenes used.')
+	parser.add_argument('--n_train', type=int, default=414, help='Number training scenes used.')
+	parser.add_argument('--n_test', type=int, default=118, help='Number testing scenes used.')
 	parser.add_argument('--rotate', default=False, action='store_true', help='Whether to rotate the data to canonical x-axis or not.')
 	parser.add_argument('--checkpt_freq', default=5, type=int, help='Override the checkpt_freq in the config file.')
 	parser.add_argument('--max_num_ckpts', default=5, type=int, help='Override the max_num_ckpts in the config file.')
@@ -344,15 +344,6 @@ def main():
 	# 构建模型网络
 	denoiser = build_network(cfg, args, logger)
 
-	# # 1) 先把全模型都冻住
-	# set_requires_grad(denoiser, False)
-	#
-	# # 2) 只打开以下几块（Stage A）
-	# set_requires_grad(denoiser.model.z_encoder.head_z, True)  # 只训练 z 头
-	# set_requires_grad(denoiser.model.z_proj, True)
-	# set_requires_grad(denoiser.model.z_gamma, True)
-	# set_requires_grad(denoiser.model.z_beta, True)
-
 	"""Train the model"""
 	trainer = Trainer(
 		cfg,
@@ -376,5 +367,5 @@ def main():
 if __name__ == "__main__":
 	main()
 
-# python fm_rat.py --exp rat_1125_sde_late_fuse --tied_noise --fm_in_scaling --checkpt_freq 5 --batch_size 128 --init_lr 1e-3
+# python fm_rat.py --exp rat_1211_sde_early_fuse --tied_noise --fm_in_scaling --checkpt_freq 5 --batch_size 128 --init_lr 1e-3
 

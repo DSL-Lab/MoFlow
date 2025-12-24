@@ -486,19 +486,19 @@ class Trainer(object):
         # print("??? pred_traj shape = {}".format(pred_traj.shape))
         assert list(pred_traj.shape[2:]) == [self.cfg.agents, self.cfg.MODEL.MODEL_OUT_DIM]
 
-        pred_traj = rearrange(pred_traj, 'b k a (f d) -> (b a) k f d', f=self.cfg.future_frames)[...,0:2]  # [B, k_preds, 11, 40] -> [B * 11, k_preds, 20, 2]
+        pred_traj = rearrange(pred_traj, 'b k a (f d) -> (b a) k f d', f=self.cfg.future_frames)[...,0:3]  # [B, k_preds, 11, 40] -> [B * 11, k_preds, 20, 2]
         # print("???? pred_traj shape = {}".format(pred_traj.shape))
-        pred_traj_at_t = rearrange(pred_traj_at_t, 'b t k a (f d) -> (b a) t k f d', f=self.cfg.future_frames)[...,0:2]  # [B, k_preds, 11, 40] -> [B * 11, k_preds, 20, 2]
+        pred_traj_at_t = rearrange(pred_traj_at_t, 'b t k a (f d) -> (b a) t k f d', f=self.cfg.future_frames)[...,0:3]  # [B, k_preds, 11, 40] -> [B * 11, k_preds, 20, 2]
 
         if self.cfg.get('data_norm', None) == 'min_max':
             # pred_traj = unnormalize_min_max(pred_traj, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1)
             # pred_traj_at_t = unnormalize_min_max(pred_traj_at_t, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1)
             # print("????? pred_traj = {} {}".format(self.cfg.stats["fut_mean"], self.cfg.stats["fut_std"]))
             pred_traj = unnormalize_mean_std(pred_traj, self.cfg.stats["fut_mean"], self.cfg.stats["fut_std"],
-                                                     1)  # [B, K, A, T, D]
+                                                     1)  # [B, K, A, T, D] 没还原
             # print("?????? pred_traj shape = {}".format(pred_traj))
             pred_traj_at_t = unnormalize_mean_std(pred_traj_at_t, self.cfg.stats["fut_mean"],
-                                                   self.cfg.stats["fut_std"], 1)  # [B, K, A, T, D]
+                                                   self.cfg.stats["fut_std"], 1)  # [B, K, A, T, D] 没还原
 
         elif self.cfg.get('data_norm', None) == 'sqrt':
             pred_traj = unnormalize_sqrt(pred_traj, self.sqrt_a_, self.sqrt_b_)
@@ -630,6 +630,7 @@ class Trainer(object):
             fut_cond_cue.append(data["fut_cond_cue"])
             fut_trajs.append(data['fut_traj'])
 
+            # 没还原对比没还原
             fut_traj = rearrange(data['fut_traj'], 'b a f d -> (b a) f d')               # [B, A, T, F] -> [B * A, T, F]
             fut_traj_gt = fut_traj.unsqueeze(1).repeat(1, self.cfg.denoising_head_preds, 1, 1)          # [B * A, K, T, F]
             distances = (fut_traj_gt - pred_traj).norm(p=2, dim=-1)                                     # [B * A, K, T]
@@ -646,7 +647,7 @@ class Trainer(object):
             elif self.cfg.dataset == 'sdd':
                 freq = 3
                 factor_time = 1.2
-            elif self.cfg.dataset == "rat":
+            elif self.cfg.dataset in ["rat", "babel"]:
                 freq = 5
                 factor_time = 0.3
 

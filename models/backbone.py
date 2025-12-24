@@ -54,7 +54,7 @@ class MotionTransformer(nn.Module):
 
         self.z0_encoder = Z0Encoder(
             num_keypoints=self.config.agents,
-            kp_dim=9,
+            kp_dim=6,
             stim_dim=self.model_cfg.get('COND_D_CUE', 0),
             hidden_dim=self.dim,
             z_dim=self.model_cfg.get('COG_D_Z', 0)
@@ -356,8 +356,32 @@ class IMLETransformer(nn.Module):
         use_pre_norm = self.model_cfg.get('USE_PRE_NORM', False)
 
         assert not use_pre_norm, "Pre-norm is not supported in this model"
+        self.T_f = self.cfg.get('future_frames', 0)
+        self.dt = self.cfg.get('dt', 0)
 
+        # （1）上下文编码器：把历史轨迹/邻居信息编码成每个 agent 的上下文向量
         self.context_encoder = build_context_encoder(self.model_cfg.CONTEXT_ENCODER, use_pre_norm, config.device)
+
+        # update 2: 将原有的条件/指令编码器 + 注入层 改为神经动力系统
+        self.z0_encoder = Z0Encoder(
+            num_keypoints=self.cfg.agents,
+            kp_dim=6,
+            stim_dim=self.model_cfg.get('COND_D_CUE', 0),
+            hidden_dim=self.dim,
+            z_dim=self.model_cfg.get('COG_D_Z', 0)
+        )
+
+        self.neural_sde = ControlledSSLSDE(
+            z_dim=self.model_cfg.get('COG_D_Z', 0),
+            stim_dim=self.model_cfg.get('COND_D_CUE', 0),
+            num_regimes=3,
+            num_bases=16,
+            hidden_dim=self.dim,
+            init_scale=0.1,
+        )
+        self.z_seq_proj =  nn.Linear(self.model_cfg.get('COG_D_Z', 0), self.dim)
+        self.z_seq_gamma = nn.Linear(self.dim, self.dim)
+        self.z_seq_beta = nn.Linear(self.dim, self.dim)
 
         ### serves the purpose of positional encoding
         if self.objective == 'set':
@@ -402,7 +426,43 @@ class IMLETransformer(nn.Module):
         params_other = params_total - params_encoder - params_decoder
         logger.info("Total parameters: {:,}, Encoder: {:,}, Decoder: {:,}, Other: {:,}".format(params_total, params_encoder, params_decoder, params_other))
 
+        # -------- 构造 SDE 的未来控制序列 u_seq --------
+    def _build_future_control_seq(
+            self,
+            x_data,
+            B: int,
+            device: torch.device,
+            dtype: torch.dtype,
+    ) -> torch.Tensor:
+        """
+        构造用于 SDE 的未来控制序列 u_seq: [B, T_f, stim_dim]
 
+        推荐做法：
+            如果 x_data 里已经有未来刺激计划 (如 x_data['fut_stim'])，
+            则直接使用；
+            否则简单使用最后一个历史刺激帧重复未来 T_f 次，作为
+            近似控制输入（也是一个合理的 baseline）。
+        """
+        T_f = self.T_f
+
+        # 情况 1：有明确的未来刺激序列
+        if "fut_cond_cue" in x_data:
+            # print("--- found fut_cond_cue")
+            fut_stim = x_data["fut_cond_cue"]  # [B, T_f, stim_dim]
+            # print("fut_cond_cue shape = {} {}".format(fut_stim.shape, T_f))
+            assert fut_stim.shape[0] == B
+            assert fut_stim.shape[1] == T_f
+            assert fut_stim.shape[2] == self.neural_sde.stim_dim
+            u_seq = fut_stim.to(device=device, dtype=dtype)
+        else:
+            # 情况 2：没有未来刺激，则用最后一个历史刺激值重复
+            assert "hist_stim" in x_data, "需要在 x_data 中提供 hist_stim 或 fut_stim"
+            hist_stim = x_data["hist_stim"]  # [B, Th, stim_dim]
+            u_last = hist_stim[:, -1, :]  # [B, stim_dim]
+            u_seq = u_last.unsqueeze(1).repeat(1, T_f, 1)  # [B, T_f, stim_dim]
+
+        return u_seq
+    
     def forward(self, x_data, num_to_gen=None):
         device = x_data['past_traj_original_scale'].device
         B, A, T, _ = x_data['past_traj_original_scale'].shape
@@ -414,8 +474,23 @@ class IMLETransformer(nn.Module):
         else:
             M = num_to_gen
 
-        # context encoder
+        # 1) context encoder
         encoder_out = self.context_encoder(x_data['past_traj_original_scale'])  # [B, A, D]
+        encoder_out_batch = repeat(encoder_out, 'b a d -> b k a d', k=K, a=A) 	# [B, K, A, D]
+
+        # 2) z0 & SDE
+        past_traj = x_data["past_traj"]          # 或者从 original_scale 转一下
+        hist_stim = x_data["hist_cond_cue"]      # [B, Th, stim_dim]
+
+        z0 = self.z0_encoder(past_traj, hist_stim)  # [B, z_dim]
+        u_seq = self._build_future_control_seq(x_data, B, device, z0.dtype)   # [B, T_f, stim_dim]
+        z_seq = simulate_sde_paths(self.neural_sde, z0, u_seq, dt=self.dt)    # [B, T_f, z_dim]
+
+        z_frame = self.z_seq_proj(z_seq)         # [B, T_f, D]
+        # 扩展到 [B, M, K, A, T_f, D]
+        z_frame_bmkat = z_frame[:, None, None, None, :, :].expand(B, M, K, A, self.T_f, D)
+        gamma = self.z_seq_gamma(z_frame_bmkat)  # [B,M,K,A,T_f,D]
+        beta  = self.z_seq_beta(z_frame_bmkat)   # [B,M,K,A,T_f,D]
 
         # init noise embeddings
         noise = torch.randn((B, M, D), device=device)       # [B, M, D]
@@ -425,10 +500,10 @@ class IMLETransformer(nn.Module):
             encoder_out_batch = repeat(encoder_out, 'b a d -> b m k a d', m=M, k=K, a=A)    # [B, M, K, A, D]
 
             k_pe = self.motion_query_embedding(torch.arange(K, device=device))	            # [K, D]
-            k_pe_batch = repeat(k_pe, 'k d -> b m k a d', b=B, m=M, a=A)	                # [B, M, K, A, D]
+            k_pe_batch = repeat(k_pe, 'k d -> b m k a t d', b=B, m=M, a=A, t=self.T_f)	                # [B, M, K, A, D]
 
             a_pe = self.agent_order_embedding(torch.arange(A, device=device))               # [A, D]
-            a_pe_batch = repeat(a_pe, 'a d -> b m k a d', b=B, m=M, k=K)	                # [B, M, K, A, D]
+            a_pe_batch = repeat(a_pe, 'a d -> b m k a t d', b=B, m=M, k=K, t=self.T_f)	                # [B, M, K, A, D]
 
             noise_emb_batch = repeat(noise_emb, 'b m d -> b m k a d', k=K, a=A)	            # [B, M, K, A, D]
         elif self.cfg.objective == 'single':
@@ -438,12 +513,16 @@ class IMLETransformer(nn.Module):
 
         # send to motion decoder
         emb_fusion = self.init_emb_fusion_mlp(torch.cat((encoder_out_batch, noise_emb_batch), dim=-1))	 	# [B, M, K, A, D]
+         # 4) 扩展时间维并做 FiLM
+        emb_fusion = emb_fusion.unsqueeze(-2).expand(B, M, K, A, self.T_f, D)   # [B,M,K,A,T_f,D]
+        emb_fusion = emb_fusion * (1.0 + gamma) + beta                          # FiLM 调制
+
         query_token = self.pe_mlp(emb_fusion + k_pe_batch + a_pe_batch) 					                # [B, M, K, A, D]
 
         if self.cfg.objective == 'set':
-            query_token = rearrange(query_token, 'b m k a d -> (b m) k a d')
+            query_token = rearrange(query_token, 'b m k a t d -> (b m) k a t d')
             readout_token = self.motion_decoder(query_token)
-            readout_token = rearrange(readout_token, '(b m) k a d -> b m k a d', m=M)
+            readout_token = rearrange(readout_token, '(b m) k a t d -> b m k a t d', m=M)
         elif self.cfg.objective == 'single':
             raise NotImplementedError
         else:
@@ -451,5 +530,6 @@ class IMLETransformer(nn.Module):
 
         # readout layers
         denoiser_x = self.reg_head(readout_token)  													# [B, K, A, F * D]
+        denoiser_x = rearrange(denoiser_x, 'b m k a t d -> b m k a (t d)')
 
         return denoiser_x

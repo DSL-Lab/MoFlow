@@ -1,5 +1,5 @@
 # ------------------- General Options -------------------------
-description                  : Correlated FlowMatching
+description                  : IMLE
 results_root_dir             : results_rat
 dataset                      : rat
 
@@ -8,36 +8,29 @@ past_frames                  : 30
 future_frames                : 30
 agents                       : 8
 dt                           : 0.033
-#traj_mean                    : [14, 7.5]
+# traj_mean                    : [14, 7.5]
 
-#sqrt_x_a                     : 6.0
-#sqrt_x_b                     : 0.0
-#sqrt_y_a                     : 4.0
-#sqrt_y_b                     : 0.0
+# sqrt_x_a                     : 6.0
+# sqrt_x_b                     : 0.0
+# sqrt_y_a                     : 4.0
+# sqrt_y_b                     : 0.0
 
 checkpt_freq                 : 10
 
 # -------------------- Flow matching config -----------------------------
-denoising_method             : 'fm'
-sampling_steps               : 10
-t_schedule                   : 'logit_normal'
-objective                    : 'pred_data'
-sigma_data                   : 0.13
+latent_tau                   : 0
+objective                    : 'set'
 
 # -------------------- Logger config -----------------------------
-notes                        : 'Flow Matching'
+notes                        : 'IMLE Distillation'
 
 
 # ---------------------------- Configurations for model ----------------------------
 MODEL:
-    Name: "CogFlow"
     NUM_PROPOSED_QUERY: 20
     MODEL_OUT_DIM: 60
     REGRESSION_MLPS: [128, 256, 64, 2]
     CLASSIFICATION_MLPS: [128, 128, 1]
-
-    USE_PE_QUERY: True
-    USE_PE_AGENT: True
 
     COND_D_CUE: 7
     COND_D_HIST: 7
@@ -47,15 +40,15 @@ MODEL:
         DATA_TYPE: rat
         NUM_OF_ATTN_NEIGHBORS: 8
         NUM_INPUT_CONTEXT: 6
-
+        
         NUM_CHANNEL_IN_MLP_AGENT: 256
         NUM_LAYER_IN_MLP_AGENT: 3
 
         D_MODEL: 128
         NUM_ATTN_LAYERS: 4
-        NUM_ATTN_HEAD: 8
-        DROPOUT_OF_ATTN: 0.1
-
+        NUM_ATTN_HEAD: 8 
+        DROPOUT_OF_ATTN: 0.1 
+ 
     MOTION_DECODER:
         NAME: MTRDecoder
         D_MODEL: 128
@@ -69,7 +62,7 @@ k_preds                      : 20
 
 # ------------------------------- Optimizer Parameters ---------------------------------
 train_batch_size             : 64
-test_batch_size              : 1000
+test_batch_size              : 64
 
 OPTIMIZATION:
     NUM_EPOCHS: 600
@@ -84,8 +77,7 @@ OPTIMIZATION:
     GRAD_NORM_CLIP: 1.0
 
     LOSS_WEIGHTS: {
-      'cls': 0,
+      'cls': 0, 
       'reg': 1.0, 
       'vel': 0.2,
-      'omega': 0,
     }

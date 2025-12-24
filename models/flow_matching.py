@@ -216,10 +216,10 @@ class FlowMatcher(nn.Module):
         return t, x_t, u_t, target, l_weight
 
     def model_predictions(self, y_t, x, t, flag_print):
-        if self.cfg.fm_in_scaling:
-            y_t_in = y_t * pad_t_like_x(self.get_input_scaling(t), y_t)
-        else:
-            y_t_in = y_t
+        # if self.cfg.fm_in_scaling:
+        y_t_in = y_t * pad_t_like_x(self.get_input_scaling(t), y_t)
+        # else:
+        #     y_t_in = y_t
 
         # model_out, pred_score = self.model(y_t_in, t, x_data = x)
         model_out = self.model(y_t_in, t, x_data = x)
@@ -286,8 +286,8 @@ class FlowMatcher(nn.Module):
 
         batch_size = x_data['batch_size']
         y_t = torch.randn((batch_size, num_trajs, self.num_agents, self.out_dim), device=self.device)
-        if self.cfg.tied_noise:
-            y_t = y_t[:, :1].expand(-1, self.cfg.denoising_head_preds, -1, -1)
+        # if self.cfg.tied_noise:
+        y_t = y_t[:, :1].expand(-1, self.cfg.denoising_head_preds, -1, -1)
 
         # sampling loop
         y_data_at_t_ls = []

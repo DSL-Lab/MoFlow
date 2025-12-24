@@ -7,7 +7,7 @@ from einops import rearrange
 import torch
 import torch.nn.functional as F
 from torch import nn
-from utils.normalization import unnormalize_min_max, unnormalize_sqrt
+from utils.normalization import unnormalize_min_max, unnormalize_sqrt, unnormalize_mean_std
 
 
 class IMLE(nn.Module):
@@ -21,11 +21,16 @@ class IMLE(nn.Module):
         """
         Train the IMLE generator.
         """
+        self.cfg.stats["fut_mean"] = self.cfg.stats["fut_mean"].cuda()
+        self.cfg.stats["fut_std"] = self.cfg.stats["fut_std"].cuda()
 
         # Get the model's predictions
         imle_gen = self.model(x_data, num_to_gen)  # [B, M, K, A, F * D]
-
-        imle_gen_metric = unnormalize_min_max(imle_gen, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1)
+        # imle_gen_metric = unnormalize_min_max(imle_gen, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1)
+        imle_gen = rearrange(imle_gen, 'b m k a (f d) -> b m k a f d', f=self.cfg.future_frames)
+        imle_gen_metric = unnormalize_mean_std(imle_gen, self.cfg.stats["fut_mean"], self.cfg.stats["fut_std"], 0)  # [B, K, A, T, D]
+        imle_gen = rearrange(imle_gen, 'b m k a f d -> b m k a (f d)')
+        imle_gen_metric = rearrange(imle_gen_metric, 'b m k a f d -> b m k a (f d)')
 
         if self.cfg.objective == 'set':
             pass
@@ -35,7 +40,8 @@ class IMLE(nn.Module):
         if self.training:
             # Compute the loss
             target = x_data['y_t']              # [B, K, A, T, 2]
-            target_metric = unnormalize_min_max(target, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1)
+            # target_metric = unnormalize_min_max(target, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1)
+            target_metric = unnormalize_mean_std(target, self.cfg.stats["fut_mean"], self.cfg.stats["fut_std"], 0)  # [B, K, A, T, D]
 
             B, K, A, T, _ = target_metric.shape
             M = imle_gen_metric.shape[1]

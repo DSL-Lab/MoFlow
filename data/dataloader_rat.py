@@ -11,6 +11,7 @@ from utils.utils import rotate_trajs_x_direction
 
 def seq_collate_rat(batch):
     (past_traj, fut_traj, past_traj_orig, fut_traj_orig, traj_vel, hist_feats, hist_cond_cue, fut_cond_cue) = zip(*batch)
+    
     pre_motion_3D = torch.stack(past_traj,dim=0)
     fut_motion_3D = torch.stack(fut_traj,dim=0)
     pre_motion_3D_orig = torch.stack(past_traj_orig, dim=0)
@@ -39,14 +40,18 @@ def seq_collate_rat(batch):
 
     return data 
 
-def seq_collate_imle_train(batch):
-    (past_traj, fut_traj, past_traj_orig, fut_traj_orig, traj_vel, y_t, y_pred_data) = zip(*batch)
+def seq_collate_imle_train_rat(batch):
+    (past_traj, fut_traj, past_traj_orig, fut_traj_orig, traj_vel, hist_feats, hist_cond_cue, fut_cond_cue, y_t, y_pred_data) = zip(*batch)
 
     pre_motion_3D = torch.stack(past_traj,dim=0)
     fut_motion_3D = torch.stack(fut_traj,dim=0)
     pre_motion_3D_orig = torch.stack(past_traj_orig, dim=0)
     fut_motion_3D_orig = torch.stack(fut_traj_orig, dim=0)
     fut_traj_vel = torch.stack(traj_vel, dim=0)
+    hist_cond_cue = torch.stack(hist_cond_cue, dim=0)
+    fut_cond_cue = torch.stack(fut_cond_cue, dim=0)
+    hist_feats = torch.stack(hist_feats, dim=0)
+
     y_t = torch.stack(y_t, dim=0)
     y_pred_data = torch.stack(y_pred_data,dim=0)
 
@@ -62,6 +67,9 @@ def seq_collate_imle_train(batch):
         'fut_traj_original_scale': fut_motion_3D_orig,
         'fut_traj_vel': fut_traj_vel,
         'traj_mask': traj_mask,
+        'hist_feats': hist_feats,
+        'hist_cond_cue': hist_cond_cue,
+        "fut_cond_cue": fut_cond_cue,
         'y_t': y_t,
         'y_pred_data': y_pred_data
     }
@@ -76,7 +84,7 @@ class RatDatasetMinMax(Dataset):
     def __init__(self,
                  obs_len=12, pred_len=18, training=True,
                  num_scenes=None, test_scenes=None,
-                 overfit=False, imle=False, cfg=None,
+                 overfit=False, imle=False, cfg=None, rotate=False,
                  data_dir='data/rat', data_file='hist10pred20/rat_train.npy',
                  data_norm='min_max'):
         super().__init__()
@@ -137,6 +145,9 @@ class RatDatasetMinMax(Dataset):
         past_traj = torch.cat([past_abs, past_rel, past_vel], dim=-1)  # [N,V,T_h, 2+2+2=6]
         self.fut_traj_vel = torch.cat([fut_traj[:, :, 1:] - fut_traj[:, :, :-1],
                                        torch.zeros_like(fut_traj[:, :, -1:])], dim=2)
+        
+        if rotate:
+            past_rel, fut_traj, past_vel = rotate_trajs_x_direction(past_rel, fut_traj, past_vel)
 
         # 记录 min/max（训练阶段初始化给 cfg）
         # print("Training = {}".format(training))
@@ -192,10 +203,45 @@ class RatDatasetMinMax(Dataset):
         print(f"RatDataset: size {self.data_len} | mode={'train' if training else 'test'}")
 
         # IMLE 蒸馏数据（如使用）
+        """load distillation target"""
         if imle:
-            # 按 NBA 的 pkl 合并逻辑装填 self.imle_data_dict（字段同名）
-            # ...（可后续再开）
-            pass
+            os.makedirs(os.path.join(data_dir, 'imle'), exist_ok=True)
+            pkl_ls = sorted(glob.glob(os.path.join(data_dir, 'imle/*train*.pkl')))
+            keys_ls = ['past_traj', 'fut_traj', 'past_traj_original_scale', 'fut_traj_original_scale', 'fut_traj_vel', 'y_t', 'y_pred_data']
+            imle_data_dict = {}
+            total_scenes_loaded_ = 0
+            for i_pkl, cur_pkl in enumerate(pkl_ls):
+                data = pickle.load(open(cur_pkl, 'rb'))
+
+                if i_pkl == 0:
+                    self.imle_meta_data = data['meta_data']
+                
+                for key in keys_ls:
+                    if key not in imle_data_dict:
+                        imle_data_dict[key] = []
+                    if key == 'y_t':
+                        imle_data_dict[key].append(data[key][:, -1])
+                    else:
+                        imle_data_dict[key].append(data[key])
+
+                total_scenes_loaded_ += data['past_traj'].shape[0]
+
+                if total_scenes_loaded_ >= len(self.trajs):
+                    break
+
+                # y_t_original_scale_ = unnormalize_min_max(torch.from_numpy(data['y_t'][:, -1]), cfg.fut_traj_min, cfg.fut_traj_max, -1, 1)
+                # y_pred_data_original_scale_ = torch.from_numpy(data['y_pred_data'])
+                # assert torch.sum(torch.abs(y_t_original_scale_ - y_pred_data_original_scale_)) < 1e-5, 'IMLE data is not consistent'
+                        
+                # past_tarj_original_scale_ = torch.from_numpy(data['past_traj_original_scale'])
+                # assert torch.sum(torch.abs(past_tarj_original_scale_[:10] - self.past_traj_original_scale[:10])) < 1e-5, 'IMLE data is not consistent'
+
+            # concat the data
+            for key in keys_ls:
+                imle_data_dict[key] = torch.from_numpy(np.concatenate(imle_data_dict[key], axis=0))[:len(self.trajs)]
+
+            self.imle_data_dict = imle_data_dict
+
 
     @torch.no_grad()
     def compute_hist_feats(self,
@@ -349,17 +395,32 @@ class RatDatasetMinMax(Dataset):
         # z_c = self.compute_zc(hist_feats, cue_feats, stats=None)  # [V,T_h,4]
 
         # 与 NBA 返回顺序对齐
-        return [
-            self.past_traj[index],                 # [V,T_h,6]
-            self.fut_traj[index],                  # [V,T_p,2]
-            self.past_traj_original_scale[index],  # [V,T_h,6]
-            self.fut_traj_original_scale[index],   # [V,T_p,2]
-            self.fut_traj_vel[index],              # [V,T_p,2]
+        if self.imle:
+            out = [
+                    self.imle_data_dict['past_traj'][index], 
+                    self.imle_data_dict['fut_traj'][index],
+                    self.imle_data_dict['past_traj_original_scale'][index],
+                    self.imle_data_dict['fut_traj_original_scale'][index],
+                    self.imle_data_dict['fut_traj_vel'][index],
+                    hist_feats,
+                    cue_feats[:30],  # 历史刺激序列
+                    cue_feats[30:],  # 未来刺激序列
+                    self.imle_data_dict['y_t'][index],
+                    self.imle_data_dict['y_pred_data'][index]
+                ]
+        else:
+            out = [
+                self.past_traj[index],                 # [V,T_h,6]
+                self.fut_traj[index],                  # [V,T_p,2]
+                self.past_traj_original_scale[index],  # [V,T_h,6]
+                self.fut_traj_original_scale[index],   # [V,T_p,2]
+                self.fut_traj_vel[index],              # [V,T_p,2]
 
-            hist_feats,
-            cue_feats[:30],  # 历史刺激序列
-            cue_feats[30:],  # 未来刺激序列
-        ]
+                hist_feats,
+                cue_feats[:30],  # 历史刺激序列
+                cue_feats[30:],  # 未来刺激序列
+            ]
+        return out
 
     def robust_minmax(self, x, q=(1, 99)):
         lo = np.percentile(x, q[0], axis=0)

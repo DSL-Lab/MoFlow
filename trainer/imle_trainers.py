@@ -21,7 +21,7 @@ from ema_pytorch import EMA
 from tqdm.auto import tqdm
 
 from utils.utils import set_random_seed
-from utils.normalization import unnormalize_min_max, unnormalize_sqrt
+from utils.normalization import unnormalize_min_max, unnormalize_sqrt, unnormalize_mean_std
 
 from .denoising_model_trainers import exists, default, identity, has_int_squareroot, cycle, build_optimizer, build_scheduler
 
@@ -349,7 +349,8 @@ class IMLETrainer(object):
         pred_traj = rearrange(pred_traj, 'b k a (f d) -> (b a) k f d', f=self.cfg.future_frames)[...,0:2]  # [B, k_preds, 11, 40] -> [B * 11, k_preds, 20, 2]
 
         if self.cfg.get('data_norm', None) == 'min_max':
-            pred_traj = unnormalize_min_max(pred_traj, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1) 
+            # pred_traj = unnormalize_min_max(pred_traj, self.cfg.fut_traj_min, self.cfg.fut_traj_max, -1, 1)
+            pred_traj = unnormalize_mean_std(pred_traj, self.cfg.stats["fut_mean"], self.cfg.stats["fut_std"], 1)  # [B, K, A, T, D]
         elif self.cfg.get('data_norm', None) == 'sqrt':
             pred_traj = unnormalize_sqrt(pred_traj, self.sqrt_a_, self.sqrt_b_)
 
@@ -434,8 +435,8 @@ class IMLETrainer(object):
             dl = self.val_loader
       
         ### setup the performance dict
-        performance = {'FDE_min': [0,0,0,0], 'ADE_min': [0,0,0,0], 'FDE_avg': [0,0,0,0], 'ADE_avg': [0,0,0,0], 'A_var': [0,0,0,0], 'F_var': [0,0,0,0], 'MASD': [0,0,0,0]}
-        performance_joint = {'JFDE_min': [0,0,0,0], 'JADE_min': [0,0,0,0], 'JFDE_avg': [0,0,0,0], 'JADE_avg': [0,0,0,0]}
+        performance = {'FDE_min': [0,0,0,0,0,0,0], 'ADE_min': [0,0,0,0,0,0,0], 'FDE_avg': [0,0,0,0,0,0,0], 'ADE_avg': [0,0,0,0,0,0,0], 'A_var': [0,0,0,0,0,0,0], 'F_var': [0,0,0,0,0,0,0], 'MASD': [0,0,0,0,0,0,0]}
+        performance_joint = {'JFDE_min': [0,0,0,0,0,0,0], 'JADE_min': [0,0,0,0,0,0,0], 'JFDE_avg': [0,0,0,0,0,0,0], 'JADE_avg': [0,0,0,0,0,0,0]}
         num_trajs = 0
         ### record running time 
         start = torch.cuda.Event(enable_timing=True)
@@ -447,10 +448,9 @@ class IMLETrainer(object):
 
             pred_traj = self.sample_from_imle(data)
 
-            fut_traj = rearrange(data['fut_traj_original_scale'], 'b a f d -> (b a) f d')               # [B, A, T, F] -> [B * A, T, F]
+            fut_traj = rearrange(data['fut_traj'], 'b a f d -> (b a) f d')               # [B, A, T, F] -> [B * A, T, F]
             fut_traj_gt = fut_traj.unsqueeze(1).repeat(1, self.cfg.denoising_head_preds, 1, 1)          # [B * A, K, T, F]
             distances = (fut_traj_gt - pred_traj).norm(p=2, dim=-1)                                     # [B * A, K, T]
-
 
             if self.cfg.dataset == 'nba':
                 freq = 5 
@@ -461,8 +461,11 @@ class IMLETrainer(object):
             elif self.cfg.dataset == 'sdd':
                 freq = 3
                 factor_time = 1.2
-                
-            for time in range(1, 5):
+            elif self.cfg.dataset == 'rat':
+                freq = 5
+                factor_time = 1.2
+
+            for time in range(1, 7):
                 ade, fde, ade_avg, fde_avg = self.compute_ADE_FDE(distances, int(time * freq))
                 jade, jfde, jade_avg, jfde_avg = self.compute_JADE_JFDE(distances, int(time * freq)) 
                 a_var, f_var = self.compute_avar_fvar(pred_traj, int(time * freq))
@@ -503,7 +506,7 @@ class IMLETrainer(object):
         cur_epoch = self.step // (self.train_num_steps // self.cfg.OPTIMIZATION.NUM_EPOCHS)
         if not testing_mode: 
             self.logger.info(f'{self.step}/{self.train_num_steps}, running inference on {num_trajs} agents (trajectories)')
-            for time in range(4):
+            for time in range(6):
                 if self.tb_log:
                     self.tb_log.add_scalar(f'eval_{status}/ADE_min_{(time+1)*factor_time:.1f}s', performance['ADE_min'][time]/num_trajs, cur_epoch)
                     self.tb_log.add_scalar(f'eval_{status}/FDE_min_{(time+1)*factor_time:.1f}s', performance['FDE_min'][time]/num_trajs, cur_epoch)
@@ -513,29 +516,29 @@ class IMLETrainer(object):
                     self.tb_log.add_scalar(f'eval_{status}/JFDE_min_{(time+1)*factor_time:.1f}s', performance_joint['JFDE_min'][time]/num_trajs, cur_epoch)
 
         # print out the performance
-        for time in range(4):
+        for time in range(6):
             self.logger.info('--ADE_min({:.1f}s): {:.7f}\t--FDE_min({:.1f}s): {:.7f}'.format(
                 time+1, performance['ADE_min'][time]/num_trajs, (time+1)*factor_time, performance['FDE_min'][time]/num_trajs))
 
       
-        for time in range(4):
+        for time in range(6):
             self.logger.info('--ADE_avg({:.1f}s): {:.7f}\t--FDE_avg({:.1f}s): {:.7f}'.format(
                 time+1, performance['ADE_avg'][time]/num_trajs, (time+1)*factor_time, performance['FDE_avg'][time]/num_trajs))
         
-        for time in range(4):
+        for time in range(6):
             self.logger.info('--AVar({:.1f}s): {:.7f}\t--FVar({:.1f}s): {:.7f}'.format(
                 time+1, performance['A_var'][time]/num_trajs, time+1, performance['F_var'][time]/num_trajs))
 
-        for time in range(4):
+        for time in range(6):
             self.logger.info('--MASD({:.1f}s): {:.7f}'.format(
                 time+1, performance['MASD'][time]/num_trajs))
 
         # print out the joint performance
-        for time in range(4):
+        for time in range(6):
             self.logger.info('--JADE_min({:.1f}s): {:.7f}\t--JFDE_min({:.1f}s): {:.7f}'.format(
                 time+1, performance_joint['JADE_min'][time]/num_trajs, (time+1)*factor_time, performance_joint['JFDE_min'][time]/num_trajs))
             
-        for time in range(4):
+        for time in range(6):
             self.logger.info('--JADE_avg({:.1f}s): {:.7f}\t--JFDE_avg({:.1f}s): {:.7f}'.format(
                 time+1, performance_joint['JADE_avg'][time]/num_trajs, (time+1)*factor_time, performance_joint['JFDE_avg'][time]/num_trajs))
 

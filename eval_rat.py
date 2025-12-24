@@ -239,6 +239,10 @@ def main():
 
 
 if __name__ == "__main__":
+	import time
+	time1 = time.time()
 	main()
+	time2 = time.time()
+	print(time2 - time1)
 
-# python eval_rat.py --ckpt_path D:\04_code\MoFlow\results_rat\sde_earlyfuse_best\checkpoint_best.pt --batch_size 1000 --sampling_steps 100 --solver lin_poly --lin_poly_p 5 --lin_poly_long_step 1000 --save_samples
+# python eval_rat.py --ckpt_path /root/CogFlow/results_rat/imle/1211_best_rat_imle_IMLE_gen_set_M_10_load_enc_GT_0.00_Chamfer_1.00_REG_S_subset4144_min_max_LR0.001_WD0.05_BS10_EP50/models/checkpoint_best.pt --batch_size 16 --sampling_steps 100 --solver lin_poly --lin_poly_p 5 --lin_poly_long_step 1000 --save_samples

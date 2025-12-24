@@ -221,3 +221,4 @@ visualize/viz/
 data/babel/
 data_generator/unzip_bz2.py
 visualize/result/
+cfg/rat/tb_eval/

@@ -63,10 +63,10 @@ class MTREncoder(nn.Module):
                                                 batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(self.layer, num_layers=self.model_cfg.NUM_ATTN_LAYERS)
         self.num_out_channels = dim
-        if self.model_cfg.DATA_TYPE == 'rat':
-            self.max_agents = 8
-        elif self.model_cfg.DATA_TYPE == 'babel':
-            self.max_agents = 22
+        # if self.model_cfg.DATA_TYPE == 'rat':
+        self.max_agents = 8
+        # elif self.model_cfg.DATA_TYPE == 'babel':
+        #     self.max_agents = 22
         self.agent_index_embed = nn.Embedding(self.max_agents, dim)
 
         # 定义关键点类型数，例如：0=后爪, 1=前爪, 2=头颈, 3=脊柱, 4=尾根
@@ -75,28 +75,28 @@ class MTREncoder(nn.Module):
 
         # 关键点到类型的映射（按你的索引顺序，示例：右/左后爪, 右/左前爪, 尾根, 头, 颈, 脊柱）
         # 例如： [RR_paw, LR_paw, RF_paw, LF_paw, tail_root, head, neck, spine]
-        if self.model_cfg.DATA_TYPE == 'rat':
-            self.register_buffer(
-                "kp_type_ids",
-                torch.tensor([0, 0, 1, 1, 4, 2, 2, 3], dtype=torch.long)  # len=8
-            )
-        elif self.model_cfg.DATA_TYPE == 'babel':
-            kp_type_ids = torch.tensor([
-                0,  # 0 pelvis
-                1, 1,  # 1-2 左/右hip
-                0,  # 3 spine1
-                1, 1,  # 4-5 左/右 knee
-                0,  # 6 spine2
-                1, 1,  # 7-8 左/右 ankle
-                0,  # 9 spine3
-                1, 1,  # 10-11 左/右 foot
-                2,  # 12 neck
-                3, 3,  # 13-14 左/右 collar
-                2,  # 15 head
-                3, 3,  # 16-17 左/右 shoulder
-                4, 4, 4, 4  # 18-21 左/右 elbow + wrist
-            ], dtype=torch.long)
-            self.register_buffer("kp_type_ids", kp_type_ids)
+        # if self.model_cfg.DATA_TYPE == 'rat':
+        self.register_buffer(
+            "kp_type_ids",
+            torch.tensor([0, 0, 1, 1, 4, 2, 2, 3], dtype=torch.long)  # len=8
+        )
+        # elif self.model_cfg.DATA_TYPE == 'babel':
+        #     kp_type_ids = torch.tensor([
+        #         0,  # 0 pelvis
+        #         1, 1,  # 1-2 左/右hip
+        #         0,  # 3 spine1
+        #         1, 1,  # 4-5 左/右 knee
+        #         0,  # 6 spine2
+        #         1, 1,  # 7-8 左/右 ankle
+        #         0,  # 9 spine3
+        #         1, 1,  # 10-11 左/右 foot
+        #         2,  # 12 neck
+        #         3, 3,  # 13-14 左/右 collar
+        #         2,  # 15 head
+        #         3, 3,  # 16-17 左/右 shoulder
+        #         4, 4, 4, 4  # 18-21 左/右 elbow + wrist
+        #     ], dtype=torch.long)
+        #     self.register_buffer("kp_type_ids", kp_type_ids)
 
 
     ### polyline encoder MLP
