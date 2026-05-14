@@ -256,11 +256,13 @@ We recommend running `python -h *.py` to explore how configuration files are rea
 ## 📚 Citation
 If you find our code useful, please consider cite our paper:
 ```
-@inproceedings{fu2025moflowonestepflowmatching,
-  author    = {Fu, Yuxiang and Yan, Qi and Wang, Lele and Li, Ke and Liao, Renjie},
-  title     = {MoFlow: One-Step Flow Matching for Human Trajectory Forecasting via Implicit Maximum Likelihood Estimation based Distillation},
-  journal   = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-  year      = {2025},
+@inproceedings{fu2025moflow,
+    author    = {Fu, Yuxiang and Yan, Qi and Wang, Lele and Li, Ke and Liao, Renjie},
+    title     = {MoFlow: One-Step Flow Matching for Human Trajectory Forecasting via Implicit Maximum Likelihood Estimation based Distillation},
+    booktitle = {Proceedings of the Computer Vision and Pattern Recognition Conference (CVPR)},
+    month     = {June},
+    year      = {2025},
+    pages     = {17282-17293}
 }
 ```
 
